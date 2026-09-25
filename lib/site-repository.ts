@@ -1,0 +1,382 @@
+import { and, count, desc, eq, ne } from "drizzle-orm";
+import { getDb } from "@/db";
+import {
+  auditLogs,
+  contentItems,
+  serviceRequests,
+  siteMembers,
+  sites,
+} from "@/db/schema";
+import type {
+  ContentRecord,
+  DashboardStats,
+  ServiceRequestRecord,
+  SiteRecord,
+} from "@/lib/models";
+
+export const SUNG_NOEN_SITE_ID = "sung-noen-municipality";
+export const SUNG_NOEN_SITE_SLUG = "sung-noen";
+
+const SUNG_NOEN_OFFICIAL_DATA = {
+  name: "เทศบาลตำบลสูงเนิน",
+  englishName: "Sung Noen Subdistrict Municipality",
+  organizationType: "เทศบาลตำบล",
+  province: "นครราชสีมา",
+  district: "สูงเนิน",
+  subdistrict: "สูงเนิน",
+  address: "111 หมู่ 1 ถนนมิตรสัมพันธ์ ตำบลสูงเนิน อำเภอสูงเนิน จังหวัดนครราชสีมา 30170",
+  phone: "0-4441-9795, 0-4441-9397, 0-4441-9930",
+  email: "sungnoen.general@gmail.com",
+  vision:
+    "เทศบาลตำบลสูงเนินต้องเป็นเมืองน่าอยู่ ปลอดภัย สะอาด เป็นระเบียบ โปร่งใสในการบริหาร มีเทคโนโลยีและนวัตกรรมที่ทันสมัย การให้บริการประชาชนอย่างเท่าเทียม สนับสนุนการใช้พลังงานสะอาดแบบยั่งยืน",
+  primaryColor: "#0B5260",
+  secondaryColor: "#E4B949",
+  servicesJson:
+    '["lighting","road","water","waste","complaint","construction","tax","welfare"]',
+  completeness: 67,
+} as const;
+
+const EXAMPLE_ARTICLE_TIMESTAMP = "2026-09-08T00:00:00.000Z";
+
+const SUNG_NOEN_EXAMPLE_ARTICLES = [
+  {
+    id: "example-article-road-lighting",
+    siteId: SUNG_NOEN_SITE_ID,
+    type: "article",
+    title: "ไฟถนนดับหรือถนนชำรุด แจ้งอย่างไรให้แก้ไขได้ตรงจุด",
+    excerpt: "เตรียมภาพ จุดเกิดเหตุ และจุดสังเกตให้ครบ ช่วยให้เจ้าหน้าที่ตรวจสอบพื้นที่และประสานงานได้รวดเร็วขึ้น",
+    body: `ถนน ทางเท้า และไฟส่องสว่างสาธารณะเป็นเรื่องใกล้ตัวที่ส่งผลต่อความปลอดภัยของทุกคน หากพบหลุมบ่อ ฝาท่อชำรุด ไฟถนนดับ หรือสิ่งกีดขวาง ควรแจ้งหน่วยงานท้องถิ่นทันที โดยหลีกเลี่ยงการเข้าใกล้จุดอันตรายหรือซ่อมแซมด้วยตนเอง
+
+ก่อนส่งเรื่อง เตรียมข้อมูล 3 อย่าง ได้แก่ ภาพที่เห็นปัญหาชัดเจน ตำแหน่งหรือบ้านเลขที่ใกล้เคียง และจุดสังเกตที่เจ้าหน้าที่หาเจอได้ง่าย หากใช้โทรศัพท์มือถือ สามารถกดใช้ตำแหน่งปัจจุบันเพื่อแนบพิกัดจริงกับคำร้องได้
+
+อธิบายผลกระทบสั้น ๆ เช่น อยู่ใกล้ทางแยก มีผู้สูงอายุใช้เส้นทาง หรือเกิดน้ำขังเมื่อฝนตก ข้อมูลเหล่านี้ช่วยให้เจ้าหน้าที่ประเมินความเร่งด่วนได้โดยไม่ต้องคาดเดา
+
+หลังส่งคำร้อง ควรเก็บเลขรับเรื่องไว้เพื่อติดตามสถานะ หากพบว่าสภาพพื้นที่เปลี่ยนแปลงหรืออันตรายเพิ่มขึ้น สามารถใช้เลขเดิมประกอบการแจ้งข้อมูลเพิ่มเติมได้`,
+    category: "โครงสร้างพื้นฐานใกล้บ้าน",
+    fiscalYear: null,
+    status: "published",
+    coverUrl: "/graphics/articles/road-lighting.webp",
+    galleryJson: '["/graphics/articles/road-lighting.webp"]',
+    youtubeUrl: "",
+    attachmentUrl: "",
+    attachmentName: "",
+    createdBy: "ระบบตัวอย่างสำหรับแก้ไข",
+    approvedBy: "ระบบตัวอย่าง",
+    scheduledAt: null,
+    publishedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    createdAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    updatedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+  },
+  {
+    id: "example-article-waste-environment",
+    siteId: SUNG_NOEN_SITE_ID,
+    type: "article",
+    title: "แยกขยะที่บ้าน เริ่มง่าย ช่วยให้ชุมชนสะอาดขึ้นทุกวัน",
+    excerpt: "รู้จักแยกขยะเปียก ขยะรีไซเคิล ขยะทั่วไป และขยะอันตราย ก่อนนำออกจากบ้าน",
+    body: `การจัดการขยะที่ดีเริ่มได้ตั้งแต่ในบ้าน เมื่อแยกขยะก่อนทิ้ง เจ้าหน้าที่จัดเก็บทำงานได้ปลอดภัยขึ้น วัสดุที่นำกลับมาใช้ใหม่ได้ไม่ปะปนกับเศษอาหาร และชุมชนลดกลิ่นรวมถึงสัตว์พาหะได้
+
+เริ่มจากจัดภาชนะอย่างน้อย 4 กลุ่ม คือ ขยะเปียกจากอาหาร วัสดุรีไซเคิลที่สะอาดและแห้ง ขยะทั่วไป และขยะอันตราย เช่น หลอดไฟ ถ่านไฟฉาย หรือกระป๋องสารเคมี ควรปิดถุงให้เรียบร้อยและแยกของมีคมในภาชนะที่แข็งแรง
+
+วัน เวลา และจุดทิ้งขยะอาจแตกต่างกันในแต่ละพื้นที่ จึงควรตรวจประกาศของหน่วยงานหรือสอบถามเจ้าหน้าที่ก่อนนำขยะชิ้นใหญ่และขยะอันตรายออกมาวาง หากพบขยะตกค้าง ให้ถ่ายภาพ ระบุจุด และแจ้งผ่านระบบคำร้อง
+
+ชุมชนที่สะอาดไม่ใช่งานของฝ่ายใดฝ่ายหนึ่ง ประชาชนช่วยลดและแยกขยะ ส่วนหน่วยงานท้องถิ่นจัดระบบเก็บขน ดูแลพื้นที่สาธารณะ และสื่อสารตารางบริการให้เข้าใจตรงกัน`,
+    category: "สิ่งแวดล้อมและความสะอาด",
+    fiscalYear: null,
+    status: "published",
+    coverUrl: "/graphics/articles/waste-environment.webp",
+    galleryJson: '["/graphics/articles/waste-environment.webp"]',
+    youtubeUrl: "",
+    attachmentUrl: "",
+    attachmentName: "",
+    createdBy: "ระบบตัวอย่างสำหรับแก้ไข",
+    approvedBy: "ระบบตัวอย่าง",
+    scheduledAt: null,
+    publishedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    createdAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    updatedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+  },
+  {
+    id: "example-article-elderly-welfare",
+    siteId: SUNG_NOEN_SITE_ID,
+    type: "article",
+    title: "ผู้สูงอายุและผู้พิการ ติดต่อขอข้อมูลสวัสดิการอย่างไร",
+    excerpt: "เริ่มจากตรวจสิทธิ เตรียมเอกสาร และติดต่อหน่วยงานท้องถิ่นในพื้นที่ทะเบียนบ้านของผู้ขอรับบริการ",
+    body: `หน่วยงานท้องถิ่นเป็นหนึ่งในจุดประสานสำคัญของงานสวัสดิการชุมชน ทั้งข้อมูลผู้สูงอายุ ผู้พิการ เด็ก ครอบครัวเปราะบาง และผู้ประสบปัญหาทางสังคม แต่เงื่อนไขและช่วงเวลารับลงทะเบียนอาจเปลี่ยนแปลงได้ จึงควรสอบถามข้อมูลล่าสุดก่อนทุกครั้ง
+
+เมื่อจะติดต่อ ควรเตรียมบัตรประจำตัวประชาชน ทะเบียนบ้าน เอกสารรับรองที่เกี่ยวข้อง และข้อมูลบัญชีธนาคารตามที่เจ้าหน้าที่แจ้ง หากให้ญาติหรือผู้ดูแลดำเนินการแทน อาจต้องมีเอกสารเพิ่มเติมตามประเภทบริการ
+
+บอกเจ้าหน้าที่ให้ชัดว่าต้องการตรวจสิทธิ สมัครใหม่ เปลี่ยนแปลงข้อมูล หรือแจ้งเหตุที่ทำให้ไม่สามารถเดินทางไปติดต่อด้วยตนเอง หากเป็นผู้ป่วยติดเตียงหรือมีข้อจำกัดด้านการเดินทาง ควรแจ้งสภาพปัญหาและช่องทางติดต่อกลับไว้ครบถ้วน
+
+อย่าส่งภาพบัตรประชาชนหรือข้อมูลส่วนบุคคลผ่านช่องทางสาธารณะ ให้ใช้แบบฟอร์มที่หน่วยงานกำหนดหรือส่งตรงกับเจ้าหน้าที่ และเก็บหลักฐานการยื่นเรื่องไว้จนกว่าจะดำเนินการเรียบร้อย`,
+    category: "สวัสดิการและคุณภาพชีวิต",
+    fiscalYear: null,
+    status: "published",
+    coverUrl: "/graphics/articles/elderly-welfare.webp",
+    galleryJson: '["/graphics/articles/elderly-welfare.webp"]',
+    youtubeUrl: "",
+    attachmentUrl: "",
+    attachmentName: "",
+    createdBy: "ระบบตัวอย่างสำหรับแก้ไข",
+    approvedBy: "ระบบตัวอย่าง",
+    scheduledAt: null,
+    publishedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    createdAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    updatedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+  },
+  {
+    id: "example-article-public-health",
+    siteId: SUNG_NOEN_SITE_ID,
+    type: "article",
+    title: "หน้าฝนนี้ ช่วยกันลดแหล่งเพาะยุงและดูแลทางระบายน้ำ",
+    excerpt: "สำรวจน้ำขังรอบบ้านทุกสัปดาห์ พร้อมแจ้งจุดเสี่ยงในพื้นที่สาธารณะให้เจ้าหน้าที่ตรวจสอบ",
+    body: `เมื่อเข้าสู่ฤดูฝน ภาชนะเล็ก ๆ ที่มีน้ำขังและทางระบายน้ำที่อุดตันอาจกลายเป็นปัญหาสุขภาพและสิ่งแวดล้อมของทั้งชุมชน การสำรวจรอบบ้านอย่างสม่ำเสมอจึงช่วยลดความเสี่ยงได้ตั้งแต่ต้นทาง
+
+เทน้ำออกจากจานรองกระถาง ปิดฝาภาชนะเก็บน้ำ เก็บยางรถยนต์และภาชนะที่ไม่ใช้ให้พ้นฝน รวมถึงเปลี่ยนน้ำในแจกันตามความเหมาะสม หากพบขยะหรือวัชพืชขวางทางระบายน้ำบริเวณบ้าน ควรจัดการโดยไม่ลงไปในจุดที่เสี่ยงอันตราย
+
+สำหรับท่อสาธารณะ คูระบายน้ำ หรือพื้นที่รกร้างที่ประชาชนจัดการเองไม่ได้ ให้ถ่ายภาพและปักหมุดตำแหน่งผ่านระบบคำร้อง ระบุว่ามีน้ำขัง กลิ่น หรือยุงจำนวนมาก และแจ้งช่วงเวลาที่พบปัญหา
+
+หน่วยงานท้องถิ่นสามารถนำข้อมูลจากหลายจุดมาวางแผนสำรวจ ทำความสะอาด และประสานงานด้านสาธารณสุขได้แม่นยำขึ้น ส่วนประชาชนช่วยติดตามพื้นที่ใกล้บ้านและแจ้งข้อมูลใหม่เมื่อสถานการณ์เปลี่ยนแปลง`,
+    category: "สุขภาพชุมชน",
+    fiscalYear: null,
+    status: "published",
+    coverUrl: "/graphics/articles/public-health.webp",
+    galleryJson: '["/graphics/articles/public-health.webp"]',
+    youtubeUrl: "",
+    attachmentUrl: "",
+    attachmentName: "",
+    createdBy: "ระบบตัวอย่างสำหรับแก้ไข",
+    approvedBy: "ระบบตัวอย่าง",
+    scheduledAt: null,
+    publishedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    createdAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    updatedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+  },
+  {
+    id: "example-article-community-participation",
+    siteId: SUNG_NOEN_SITE_ID,
+    type: "article",
+    title: "ประชาชนมีส่วนร่วมกับแผนพัฒนาท้องถิ่นได้อย่างไร",
+    excerpt: "ติดตามประกาศ เตรียมข้อเสนอจากปัญหาจริง และร่วมสะท้อนความต้องการของชุมชนอย่างมีข้อมูล",
+    body: `แผนพัฒนาท้องถิ่นมีผลต่อโครงการและบริการในชีวิตประจำวัน ตั้งแต่ถนน น้ำ การจัดการขยะ พื้นที่สาธารณะ ไปจนถึงงานด้านเด็ก ผู้สูงอายุ และสุขภาพชุมชน ประชาชนจึงมีบทบาทสำคัญในการบอกปัญหาและลำดับความต้องการของพื้นที่
+
+เริ่มจากติดตามประกาศการประชุมประชาคม การรับฟังความคิดเห็น และการเผยแพร่ร่างแผนของหน่วยงาน เมื่อมีประเด็นที่ต้องการเสนอ ควรรวบรวมสถานที่ ภาพถ่าย จำนวนผู้ได้รับผลกระทบ และเหตุผลว่าปัญหานั้นสำคัญต่อชุมชนอย่างไร
+
+ข้อเสนอที่ชัดควรระบุปัญหาก่อนเสนอวิธีแก้ เช่น ทางเดินไม่ปลอดภัยสำหรับผู้สูงอายุ น้ำท่วมซ้ำในจุดเดิม หรือพื้นที่เด็กเล่นขาดการดูแล วิธีนี้เปิดโอกาสให้เจ้าหน้าที่พิจารณาทางเลือก งบประมาณ และหน่วยงานที่เกี่ยวข้องได้รอบด้าน
+
+หลังส่งข้อเสนอ ควรติดตามประกาศและเอกสารสาธารณะของหน่วยงาน เพื่อดูว่าประเด็นได้รับการบรรจุ พิจารณา หรือขอข้อมูลเพิ่มเติมหรือไม่ การมีส่วนร่วมอย่างต่อเนื่องช่วยให้แผนสะท้อนชีวิตจริงของคนในพื้นที่มากขึ้น`,
+    category: "การมีส่วนร่วมของประชาชน",
+    fiscalYear: null,
+    status: "published",
+    coverUrl: "/graphics/articles/community-participation.webp",
+    galleryJson: '["/graphics/articles/community-participation.webp"]',
+    youtubeUrl: "",
+    attachmentUrl: "",
+    attachmentName: "",
+    createdBy: "ระบบตัวอย่างสำหรับแก้ไข",
+    approvedBy: "ระบบตัวอย่าง",
+    scheduledAt: null,
+    publishedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    createdAt: EXAMPLE_ARTICLE_TIMESTAMP,
+    updatedAt: EXAMPLE_ARTICLE_TIMESTAMP,
+  },
+] as const;
+
+async function ensureSungNoenExampleArticles() {
+  const db = getDb();
+  await db.insert(contentItems).values([...SUNG_NOEN_EXAMPLE_ARTICLES]).onConflictDoNothing();
+}
+
+export async function ensureSungNoenSiteForUser(
+  userId: string,
+  userEmail: string,
+): Promise<SiteRecord> {
+  const db = getDb();
+  const findExisting = async () => {
+    const [site] = await db
+      .select()
+      .from(sites)
+      .where(eq(sites.slug, SUNG_NOEN_SITE_SLUG))
+      .limit(1);
+    return site ?? null;
+  };
+
+  const existing = await findExisting();
+  if (existing) {
+    if (existing.ownerUserId !== userId) {
+      throw new Error("เว็บไซต์เทศบาลตำบลสูงเนินมีเจ้าของในระบบแล้ว");
+    }
+    return existing;
+  }
+
+  try {
+    await db.batch([
+      db.insert(sites).values({
+        id: SUNG_NOEN_SITE_ID,
+        ownerUserId: userId,
+        slug: SUNG_NOEN_SITE_SLUG,
+        status: "draft",
+        ...SUNG_NOEN_OFFICIAL_DATA,
+      }),
+      db.insert(siteMembers).values({
+        id: crypto.randomUUID(),
+        siteId: SUNG_NOEN_SITE_ID,
+        userId,
+        email: userEmail,
+        role: "super_admin",
+        department: "ผู้ดูแลระบบกลาง",
+      }),
+      db.insert(auditLogs).values({
+        id: crypto.randomUUID(),
+        siteId: SUNG_NOEN_SITE_ID,
+        actorUserId: userId,
+        actorEmail: userEmail,
+        action: "site.created",
+        entityType: "site",
+        entityId: SUNG_NOEN_SITE_ID,
+        metadata: JSON.stringify({
+          slug: SUNG_NOEN_SITE_SLUG,
+          template: "local-government-v1",
+          requestedByUser: true,
+          verifiedSources: [
+            "https://sungnoen.go.th/",
+            "https://sungnoen.go.th/page27-2/",
+            "https://sungnoen.go.th/page39-2/",
+          ],
+        }),
+      }),
+    ]);
+  } catch (error) {
+    const racedSite = await findExisting();
+    if (racedSite?.ownerUserId === userId) return racedSite;
+    throw error;
+  }
+
+  const created = await findExisting();
+  if (!created) throw new Error("สร้างเว็บไซต์เทศบาลตำบลสูงเนินไม่สำเร็จ");
+  return created;
+}
+
+export async function listSitesForUser(userId: string): Promise<SiteRecord[]> {
+  const db = getDb();
+  return db
+    .select()
+    .from(sites)
+    .where(eq(sites.ownerUserId, userId))
+    .orderBy(desc(sites.updatedAt));
+}
+
+export async function getManagedSite(
+  siteId: string,
+  userId: string,
+): Promise<SiteRecord | null> {
+  const db = getDb();
+  const [owned] = await db
+    .select()
+    .from(sites)
+    .where(and(eq(sites.id, siteId), eq(sites.ownerUserId, userId)))
+    .limit(1);
+  if (owned) return owned;
+
+  const [membership] = await db
+    .select({ site: sites })
+    .from(siteMembers)
+    .innerJoin(sites, eq(siteMembers.siteId, sites.id))
+    .where(
+      and(
+        eq(siteMembers.siteId, siteId),
+        eq(siteMembers.userId, userId),
+        eq(siteMembers.active, true),
+      ),
+    )
+    .limit(1);
+  return membership?.site ?? null;
+}
+
+export async function getPublicSiteBySlug(slug: string): Promise<SiteRecord | null> {
+  const db = getDb();
+  const [site] = await db.select().from(sites).where(eq(sites.slug, slug)).limit(1);
+  return site ?? null;
+}
+
+export async function listPublishedSites(): Promise<SiteRecord[]> {
+  const db = getDb();
+  return db
+    .select()
+    .from(sites)
+    .where(eq(sites.status, "published"))
+    .orderBy(desc(sites.updatedAt));
+}
+
+export async function listContentForSite(siteId: string): Promise<ContentRecord[]> {
+  if (siteId === SUNG_NOEN_SITE_ID) await ensureSungNoenExampleArticles();
+  const db = getDb();
+  return db
+    .select()
+    .from(contentItems)
+    .where(eq(contentItems.siteId, siteId))
+    .orderBy(desc(contentItems.updatedAt))
+    .limit(80);
+}
+
+export async function listPublishedContent(
+  siteId: string,
+): Promise<ContentRecord[]> {
+  if (siteId === SUNG_NOEN_SITE_ID) await ensureSungNoenExampleArticles();
+  const db = getDb();
+  return db
+    .select()
+    .from(contentItems)
+    .where(
+      and(eq(contentItems.siteId, siteId), eq(contentItems.status, "published")),
+    )
+    .orderBy(desc(contentItems.publishedAt), desc(contentItems.updatedAt))
+    .limit(30);
+}
+
+export async function listRequestsForSite(
+  siteId: string,
+): Promise<ServiceRequestRecord[]> {
+  const db = getDb();
+  return db
+    .select()
+    .from(serviceRequests)
+    .where(eq(serviceRequests.siteId, siteId))
+    .orderBy(desc(serviceRequests.createdAt))
+    .limit(80);
+}
+
+export async function getDashboardStats(siteId: string): Promise<DashboardStats> {
+  const db = getDb();
+  const [contentCount, draftCount, openCount, completedCount] = await Promise.all([
+    db.select({ value: count() }).from(contentItems).where(eq(contentItems.siteId, siteId)),
+    db
+      .select({ value: count() })
+      .from(contentItems)
+      .where(and(eq(contentItems.siteId, siteId), eq(contentItems.status, "draft"))),
+    db
+      .select({ value: count() })
+      .from(serviceRequests)
+      .where(
+        and(
+          eq(serviceRequests.siteId, siteId),
+          ne(serviceRequests.status, "completed"),
+        ),
+      ),
+    db
+      .select({ value: count() })
+      .from(serviceRequests)
+      .where(
+        and(
+          eq(serviceRequests.siteId, siteId),
+          eq(serviceRequests.status, "completed"),
+        ),
+      ),
+  ]);
+
+  return {
+    content: contentCount[0]?.value ?? 0,
+    drafts: draftCount[0]?.value ?? 0,
+    openRequests: openCount[0]?.value ?? 0,
+    completedRequests: completedCount[0]?.value ?? 0,
+  };
+}

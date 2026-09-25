@@ -1,0 +1,222 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../vendor/shadcn-tailwind-4.13.0.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+:root {
+  color-scheme: only light;
+  --background: #f3f6fa;
+  --foreground: #10233a;
+  --card: #ffffff;
+  --card-foreground: #10233a;
+  --popover: #ffffff;
+  --popover-foreground: #10233a;
+  --primary: #0b5260;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eef5;
+  --secondary-foreground: #173654;
+  --muted: #edf2f7;
+  --muted-foreground: #607187;
+  --accent: #fff2c2;
+  --accent-foreground: #493600;
+  --destructive: #bd2d3a;
+  --border: #d9e2ec;
+  --input: #ccd8e4;
+  --ring: #c88a16;
+  --chart-1: #0b5260;
+  --chart-2: #c88a16;
+  --chart-3: #2f6f91;
+  --chart-4: #4d8b66;
+  --chart-5: #9d5364;
+  --radius: 0.85rem;
+  --sidebar: #0b1f36;
+  --sidebar-foreground: #eef5fb;
+  --sidebar-primary: #e4b949;
+  --sidebar-primary-foreground: #10233a;
+  --sidebar-accent: #163652;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #28445f;
+  --sidebar-ring: #e4b949;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: "Noto Sans Thai", "Leelawadee UI", Tahoma, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #091523;
+  --foreground: #eef5fb;
+  --card: #10243a;
+  --card-foreground: #eef5fb;
+  --popover: #10243a;
+  --popover-foreground: #eef5fb;
+  --primary: #61b9c3;
+  --primary-foreground: #071a22;
+  --secondary: #19334d;
+  --secondary-foreground: #eef5fb;
+  --muted: #152b42;
+  --muted-foreground: #a7b8c9;
+  --accent: #594817;
+  --accent-foreground: #fff4cd;
+  --destructive: #ff7b83;
+  --border: #29445e;
+  --input: #36516b;
+  --ring: #e4b949;
+  --chart-1: #61b9c3;
+  --chart-2: #e4b949;
+  --chart-3: #79a8ce;
+  --chart-4: #7fbd92;
+  --chart-5: #d98aa0;
+  --sidebar: #071525;
+  --sidebar-foreground: #eef5fb;
+  --sidebar-primary: #e4b949;
+  --sidebar-primary-foreground: #10233a;
+  --sidebar-accent: #163652;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #28445f;
+  --sidebar-ring: #e4b949;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-width: 320px;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 7.5rem;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+.civic-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.thai-balance {
+  text-wrap: balance;
+}
+
+.public-hero {
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--site-secondary) 25%, transparent) 0, transparent 28%),
+    radial-gradient(circle at 94% 84%, color-mix(in srgb, var(--site-primary) 65%, white 10%) 0, transparent 35%),
+    linear-gradient(125deg, color-mix(in srgb, var(--site-primary) 78%, #071b2d) 0%, #102a43 68%, #0b1f36 100%);
+}
+
+.public-vision-card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--site-primary) 92%, #06253a), #163e58 72%);
+}
+
+.public-open-data {
+  background:
+    radial-gradient(circle at 12% 20%, color-mix(in srgb, var(--site-secondary) 16%, transparent), transparent 28%),
+    linear-gradient(125deg, #0b2136, #10344a 65%, color-mix(in srgb, var(--site-primary) 65%, #102a43));
+}
+
+.service-tile {
+  isolation: isolate;
+}
+
+.service-tile::after {
+  position: absolute;
+  inset: auto -1.5rem -2.5rem auto;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--service-color) 8%, transparent);
+  content: "";
+  z-index: -1;
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal-up {
+  animation: reveal-up 420ms ease-out both;
+}
+
+.public-high-contrast {
+  --site-primary: #003b46 !important;
+  --site-secondary: #ffd23f !important;
+  filter: contrast(1.15);
+}
+
+.public-high-contrast :focus-visible {
+  outline: 3px solid #ffd23f !important;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

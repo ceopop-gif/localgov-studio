@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788792467315,
+      "tag": "0000_loving_golden_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788799812040,
+      "tag": "0001_low_whirlwind",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788801739177,
+      "tag": "0002_publish_sung_noen",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788831135111,
+      "tag": "0003_normal_warbound",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788838107678,
+      "tag": "0004_lush_blob",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788841944208,
+      "tag": "0005_naive_steve_rogers",
+      "breakpoints": true
+    }
+  ]
+}
