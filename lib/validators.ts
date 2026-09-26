@@ -1,3 +1,4 @@
+import { DEFAULT_SECTIONS } from "@/lib/site-template";
 import { z } from "zod";
 import { homepageConfigSchema } from "@/lib/homepage-config";
 import { isSupportedYouTubeUrl } from "@/lib/content-media";
@@ -14,27 +15,86 @@ const siteAssetUrlSchema = z
       /^https:\/\/[a-z0-9.-]+(?:\/|$)/i.test(value),
   );
 
-export const createSiteSchema = z.object({
-  name: z.string().trim().min(3).max(160),
-  englishName: z.string().trim().max(160).optional().default(""),
-  slug: z
-    .string()
-    .trim()
-    .min(3)
-    .max(60)
-    .regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/),
-  organizationType: z.enum([
-    "องค์การบริหารส่วนตำบล",
-    "เทศบาลตำบล",
-    "เทศบาลเมือง",
-    "เทศบาลนคร",
-  ]),
-  province: z.string().trim().max(100).optional().default(""),
-  district: z.string().trim().max(100).optional().default(""),
-  subdistrict: z.string().trim().max(100).optional().default(""),
-  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#0B5260"),
-  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#E4B949"),
-});
+export const createSiteSchema = z
+  .object({
+    name: z.string().trim().min(3).max(160),
+    englishName: z.string().trim().max(160).optional().default(""),
+    slug: z
+      .string()
+      .trim()
+      .min(3)
+      .max(60)
+      .regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/)
+      .refine(
+        (value) => value !== "sungnoen-demo",
+        "ชื่อ URL นี้สงวนไว้สำหรับตัวอย่าง",
+      ),
+    organizationType: z.enum([
+      "องค์การบริหารส่วนตำบล",
+      "เทศบาลตำบล",
+      "เทศบาลเมือง",
+      "เทศบาลนคร",
+    ]),
+    province: z.string().trim().max(100).optional().default(""),
+    district: z.string().trim().max(100).optional().default(""),
+    subdistrict: z.string().trim().max(100).optional().default(""),
+    primaryColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .default("#0B5260"),
+    secondaryColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .default("#E4B949"),
+    address: z.string().trim().max(500).default(""),
+    phone: z.string().trim().max(50).default(""),
+    email: z.string().trim().email().or(z.literal("")).default(""),
+    vision: z.string().trim().max(1000).default(""),
+    logoUrl: siteAssetUrlSchema.default(""),
+    sourceSiteId: z
+      .string()
+      .trim()
+      .min(3)
+      .max(100)
+      .regex(/^[a-zA-Z0-9-]+$/)
+      .optional(),
+    services: z
+      .array(
+        z.enum([
+          "lighting",
+          "road",
+          "water",
+          "waste",
+          "complaint",
+          "construction",
+          "tax",
+          "welfare",
+        ]),
+      )
+      .max(8)
+      .default([
+        "lighting",
+        "road",
+        "water",
+        "waste",
+        "complaint",
+        "construction",
+        "tax",
+        "welfare",
+      ]),
+    sections: z
+      .object({
+        services: z.boolean(),
+        process: z.boolean(),
+        news: z.boolean(),
+        about: z.boolean(),
+        transparency: z.boolean(),
+        contact: z.boolean(),
+      })
+      .strict()
+      .default(DEFAULT_SECTIONS),
+  })
+  .strict();
 
 export const updateSiteSchema = z
   .object({
@@ -48,8 +108,14 @@ export const updateSiteSchema = z
     email: z.string().trim().email().or(z.literal("")).optional(),
     vision: z.string().trim().max(1000).optional(),
     logoUrl: siteAssetUrlSchema.optional(),
-    primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-    secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+    primaryColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .optional(),
+    secondaryColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .optional(),
     services: z.array(z.string().trim().min(1).max(80)).max(50).optional(),
     homepage: homepageConfigSchema.optional(),
     status: z.enum(["draft", "published", "maintenance"]).optional(),
@@ -75,7 +141,13 @@ export const createContentSchema = z.object({
   status: z.enum(["draft", "review", "approved", "published"]).default("draft"),
   coverUrl: siteAssetUrlSchema.optional().default(""),
   galleryUrls: z.array(siteAssetUrlSchema).max(5).optional().default([]),
-  youtubeUrl: z.string().trim().max(500).refine(isSupportedYouTubeUrl, "ลิงก์ YouTube ไม่ถูกต้อง").optional().default(""),
+  youtubeUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine(isSupportedYouTubeUrl, "ลิงก์ YouTube ไม่ถูกต้อง")
+    .optional()
+    .default(""),
   attachmentUrl: siteAssetUrlSchema.optional().default(""),
   attachmentName: z.string().trim().max(255).optional().default(""),
 });
@@ -87,10 +159,17 @@ export const updateContentSchema = z
     body: z.string().trim().max(30000).optional(),
     category: z.string().trim().min(2).max(100).optional(),
     fiscalYear: z.number().int().min(2500).max(2700).nullable().optional(),
-    status: z.enum(["draft", "review", "approved", "published", "archived"]).optional(),
+    status: z
+      .enum(["draft", "review", "approved", "published", "archived"])
+      .optional(),
     coverUrl: siteAssetUrlSchema.optional(),
     galleryUrls: z.array(siteAssetUrlSchema).max(5).optional(),
-    youtubeUrl: z.string().trim().max(500).refine(isSupportedYouTubeUrl, "ลิงก์ YouTube ไม่ถูกต้อง").optional(),
+    youtubeUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(isSupportedYouTubeUrl, "ลิงก์ YouTube ไม่ถูกต้อง")
+      .optional(),
     attachmentUrl: siteAssetUrlSchema.optional(),
     attachmentName: z.string().trim().max(255).optional(),
   })

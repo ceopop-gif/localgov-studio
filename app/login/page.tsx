@@ -29,7 +29,7 @@ export default async function LoginPage({
 
   return (
     <LocalAdminLogin
-      chatGPTSignInUrl={chatGPTSignInPath(returnTo)}
+      chatGPTSignInUrl={chatGPTSignInPath("/admin")}
       localReturnTo={fallback}
     />
   );

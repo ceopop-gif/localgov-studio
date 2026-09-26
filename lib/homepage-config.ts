@@ -145,18 +145,24 @@ export const homepageConfigSchema = z.object({
 export type HomepageConfig = z.infer<typeof homepageConfigSchema>;
 
 export function getDefaultHomepageConfig(
-  site?: Pick<SiteRecord, "vision">,
+  site?: Pick<SiteRecord, "vision"> &
+    Partial<Pick<SiteRecord, "name" | "organizationType">>,
 ): HomepageConfig {
+  const agency = site?.organizationType?.includes("องค์การบริหาร")
+    ? "อบต."
+    : site?.organizationType?.includes("เทศบาล")
+      ? "เทศบาล"
+      : "หน่วยงาน";
   return {
     header: {
-      phoneLabel: "โทรหาเทศบาล",
+      phoneLabel: `โทรหา${agency}`,
       mobileDescription: "บริการ ข่าวสาร และข้อมูลใกล้ตัว",
       navigation: {
         home: "หน้าหลัก",
         services: "แจ้งปัญหา",
         news: "ข่าวชุมชน",
         transparency: "ข้อมูลเปิดเผย",
-        about: "รู้จักสูงเนิน",
+        about: "รู้จักเรา",
         contact: "ติดต่อเรา",
       },
     },
@@ -172,18 +178,23 @@ export function getDefaultHomepageConfig(
       trackingTitle: "ทุกคำร้องมีเลขติดตาม",
       trackingText: "รู้ว่าเรื่องถึงไหน และอยู่กับหน่วยงานใด",
       imageUrl: "/graphics/community-service-hero.webp",
-      imageAlt: "ภาพประกอบชาวบ้านหลายวัยใช้บริการเทศบาลผ่านโทรศัพท์มือถือ",
+      imageAlt:
+        "ภาพประกอบชาวบ้านหลายวัยใช้บริการหน่วยงานท้องถิ่นผ่านโทรศัพท์มือถือ",
     },
     quickActions: [
-      { title: "แจ้งปัญหาในชุมชน", text: "ถ่ายรูป บอกจุดเกิดเหตุ ส่งถึงเจ้าหน้าที่" },
+      {
+        title: "แจ้งปัญหาในชุมชน",
+        text: "ถ่ายรูป บอกจุดเกิดเหตุ ส่งถึงเจ้าหน้าที่",
+      },
       { title: "เช็กเรื่องที่แจ้ง", text: "ดูสถานะด้วยเลขรับเรื่องได้ทุกเวลา" },
       { title: "แบบฟอร์มประชาชน", text: "ค้นหาคู่มือและเอกสารที่ต้องใช้" },
-      { title: "โทรหาเทศบาล", text: "ดูข้อมูลติดต่อหน่วยงาน" },
+      { title: `โทรหา${agency}`, text: "ดูข้อมูลติดต่อหน่วยงาน" },
     ],
     services: {
       visible: true,
       imageUrl: "/graphics/services-community.webp",
-      imageAlt: "ภาพประกอบชาวบ้านใช้บริการเทศบาลและแจ้งปัญหาชุมชนผ่านโทรศัพท์",
+      imageAlt:
+        "ภาพประกอบชาวบ้านใช้บริการหน่วยงานท้องถิ่นและแจ้งปัญหาชุมชนผ่านโทรศัพท์",
       eyebrow: "เรื่องใกล้บ้าน ทำออนไลน์ได้",
       title: "เลือกเรื่องที่ต้องการแจ้ง",
       description: "กดที่เรื่องนั้น กรอกรายละเอียด แล้วรับเลขติดตามทันที",
@@ -204,8 +215,9 @@ export function getDefaultHomepageConfig(
     process: {
       visible: true,
       badge: "ง่าย 3 ขั้นตอน",
-      title: "ไม่ต้องเดินทางมาเทศบาล",
-      description: "เริ่มแจ้งเรื่องผ่านมือถือได้ทุกที่ และกลับมาเช็กความคืบหน้าได้ด้วยตัวเอง",
+      title: `ไม่ต้องเดินทางมา${agency}`,
+      description:
+        "เริ่มแจ้งเรื่องผ่านมือถือได้ทุกที่ และกลับมาเช็กความคืบหน้าได้ด้วยตัวเอง",
       steps: [
         { title: "เลือกเรื่อง", text: "เลือกบริการที่ตรงกับปัญหา" },
         { title: "ส่งรายละเอียด", text: "บอกจุดเกิดเหตุและแนบข้อมูล" },
@@ -217,8 +229,9 @@ export function getDefaultHomepageConfig(
       imageUrl: "/graphics/news-community.webp",
       imageAlt: "ภาพประกอบประชาชนหลายวัยติดตามข่าวสารและกิจกรรมในชุมชน",
       eyebrow: "ข่าวชุมชน อ่านแล้วรู้เรื่อง",
-      title: "เรื่องใหม่จากเทศบาล",
-      description: "ข่าว ประกาศ จัดซื้อจัดจ้าง และข้อมูลโปร่งใส รวมไว้ในที่เดียว",
+      title: `เรื่องใหม่จาก${agency}`,
+      description:
+        "ข่าว ประกาศ จัดซื้อจัดจ้าง และข้อมูลโปร่งใส รวมไว้ในที่เดียว",
       allText: "ดูข่าวทั้งหมด",
       newsTab: "ข่าวล่าสุด",
       procurementTab: "จัดซื้อจัดจ้าง",
@@ -229,11 +242,12 @@ export function getDefaultHomepageConfig(
       latestBadge: "ข่าวใหม่",
       cardFallbackText: "อ่านรายละเอียดและเอกสารแนบ",
       readMoreText: "อ่านต่อ",
-      emptyDescription: "เมื่อเจ้าหน้าที่เผยแพร่ข้อมูล รายการล่าสุดจะแสดงที่นี่ทันที",
+      emptyDescription:
+        "เมื่อเจ้าหน้าที่เผยแพร่ข้อมูล รายการล่าสุดจะแสดงที่นี่ทันที",
     },
     about: {
       visible: true,
-      badge: "วิสัยทัศน์ของเทศบาล",
+      badge: `วิสัยทัศน์ของ${agency}`,
       visionText: site?.vision || "ข้อมูลวิสัยทัศน์รอการตรวจสอบจากหน่วยงาน",
       locationFallback: "ข้อมูลพื้นที่รอตรวจสอบ",
       imageUrl: "",
@@ -247,20 +261,26 @@ export function getDefaultHomepageConfig(
     transparency: {
       visible: true,
       imageUrl: "/graphics/transparency-community.webp",
-      imageAlt: "ภาพประกอบเจ้าหน้าที่นำเสนอข้อมูลแผนงานและงบประมาณให้ประชาชนตรวจสอบ",
+      imageAlt:
+        "ภาพประกอบเจ้าหน้าที่นำเสนอข้อมูลแผนงานและงบประมาณให้ประชาชนตรวจสอบ",
       badge: "ข้อมูลโปร่งใส ตรวจสอบได้",
       title: "เอกสารราชการ หาให้ง่าย ไม่ต้องเปิดหลายหน้า",
       description:
         "แผนงาน งบประมาณ จัดซื้อจัดจ้าง กฎหมาย และผลการดำเนินงาน จัดหมวดตามปีงบประมาณอย่างชัดเจน",
-      items: ["แผนงานและงบประมาณ", "จัดซื้อจัดจ้าง", "ITA / OIT", "กฎหมายและคู่มือ"],
+      items: [
+        "แผนงานและงบประมาณ",
+        "จัดซื้อจัดจ้าง",
+        "ITA / OIT",
+        "กฎหมายและคู่มือ",
+      ],
     },
     contact: {
       visible: true,
-      mapTitle: "มาเทศบาลไม่ถูก?",
+      mapTitle: `มา${agency}ไม่ถูก?`,
       mapDescription: "เปิดเส้นทางจากที่อยู่ของหน่วยงานได้ทันที",
       mapButton: "เปิดแผนที่",
       eyebrow: "ติดต่อหน่วยงาน",
-      callButton: "โทรหาเทศบาล",
+      callButton: `โทรหา${agency}`,
       addressLabel: "ที่อยู่",
       phoneLabel: "โทรศัพท์",
       emailLabel: "อีเมล",
@@ -281,13 +301,20 @@ export function getDefaultHomepageConfig(
 
 function mergeConfig(base: unknown, override: unknown): unknown {
   if (Array.isArray(base)) {
-    if (!Array.isArray(override) || override.length !== base.length) return base;
+    if (!Array.isArray(override) || override.length !== base.length)
+      return base;
     return base.map((item, index) => mergeConfig(item, override[index]));
   }
   if (base && typeof base === "object") {
-    const candidate = override && typeof override === "object" ? override as Record<string, unknown> : {};
+    const candidate =
+      override && typeof override === "object"
+        ? (override as Record<string, unknown>)
+        : {};
     return Object.fromEntries(
-      Object.entries(base).map(([key, value]) => [key, mergeConfig(value, candidate[key])]),
+      Object.entries(base).map(([key, value]) => [
+        key,
+        mergeConfig(value, candidate[key]),
+      ]),
     );
   }
   return typeof override === typeof base ? override : base;
@@ -295,7 +322,8 @@ function mergeConfig(base: unknown, override: unknown): unknown {
 
 export function getHomepageConfig(
   homepageJson: string | null | undefined,
-  site?: Pick<SiteRecord, "vision">,
+  site?: Pick<SiteRecord, "vision"> &
+    Partial<Pick<SiteRecord, "name" | "organizationType">>,
 ): HomepageConfig {
   const defaults = getDefaultHomepageConfig(site);
   if (!homepageJson) return defaults;
