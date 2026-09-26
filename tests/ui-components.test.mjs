@@ -128,7 +128,7 @@ test("registration, approval and image controls expose the intended workflow", a
   assert.match(registration,/name="username"/);assert.match(registration,/name="password"/);assert.match(registration,/ส่งคำขอลงทะเบียน/);assert.match(registration,/แผนที่ Google Maps/);assert.match(registration,/name="officerPosition"/);assert.doesNotMatch(registration,/สูงเนิน/);
   const {PlatformConsole}=await vite.ssrLoadModule('/components/platform-console.tsx');
   const html=renderToStaticMarkup(React.createElement(PlatformConsole,{userName:'Test',initialAgencies:[{id:'one',name:'หน่วยงานทดสอบ',slug:'test-town',province:'จังหวัด',email:'test@example.invalid',phone:'',status:'draft',username:'test.staff',contactName:'Staff',approvalStatus:'pending',domainLabel:'test-town',domainStatus:'pending_dns',submittedAt:'2026-09-26'}]}));
-  assert.match(html,/อนุมัติ/);assert.match(html,/test-town.weblocalgov.com/);assert.match(html,/รอเชื่อมโดเมน/);
+  assert.match(html,/อนุมัติ/);assert.match(html,/weblocalgov.com\/test-town/);assert.match(html,/href="\/test-town"/);assert.doesNotMatch(html,/รอเชื่อมโดเมน/);
   const {AiImagePanel}=await vite.ssrLoadModule('/components/ai-image-panel.tsx');
   const panel=renderToStaticMarkup(React.createElement(AiImagePanel,{siteId:'one',onCreated:()=>{}}));assert.match(panel,/AI สร้างภาพ/);assert.match(panel,/ai-image-prompt/);assert.doesNotMatch(panel,/sk-proj-/);
 });

@@ -3,6 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getSiteAccessStatus } from "@/lib/site-access";
+import { WEBSITE_ORIGIN } from "@/lib/website-url";
 import { PublicSiteHome } from "@/components/public-site-home";
 import { DEMO_CONTENT, DEMO_SITE, type ContentRecord } from "@/lib/models";
 import {
@@ -60,8 +61,10 @@ export async function generateMetadata({
 
 export default async function PublicSitePage({
   params,
+  publicPath,
 }: {
   params: Promise<{ slug: string }>;
+  publicPath?: string;
 }) {
   const { slug } = await params;
   const site = await resolveSite(slug);
@@ -80,7 +83,7 @@ export default async function PublicSitePage({
         "@context": "https://schema.org",
         "@type": "GovernmentOrganization",
         name: site.name,
-        url: `https://localgov-studio.bbb78987.chatgpt.site/site/${site.slug}`,
+        url: `${WEBSITE_ORIGIN}${publicPath || `/site/${site.slug}`}`,
         ...(site.email ? { email: site.email } : {}),
         ...(site.phone ? { telephone: site.phone } : {}),
       };

@@ -1,5 +1,5 @@
 "use client";
-import { AiImagePanel } from "@/components/ai-image-panel";
+import { MediaLibrary } from "@/components/media-library";
 import { MASTER_TEMPLATE_SITE_ID } from "@/lib/template-identity";
 
 import type { CSSProperties } from "react";
@@ -17,7 +17,6 @@ import {
   ClipboardCheck,
   ClipboardList,
   Clock3,
-  CloudUpload,
   Download,
   ExternalLink,
   FileCheck2,
@@ -657,47 +656,6 @@ function ContentTable({ content, site, onUpdated }: { content: ContentRecord[]; 
   );
 }
 
-function MediaPanel({ site }: { site: SiteRecord }) {
-  const [files, setFiles] = useState<{ id: string; fileName: string; url: string }[]>([]);
-  const [category, setCategory] = useState("document");
-  const [uploading, setUploading] = useState(false);
-
-  useEffect(() => {
-    if (site.isDemo) return;
-    let current = true;
-    fetch(`/api/sites/${site.id}/media`).then(async response => {
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "โหลดคลังสื่อไม่สำเร็จ");
-      if (current) setFiles(data.files.map((file: {id:string;fileName:string}) => ({...file,url:`/api/media/${file.id}`})));
-    }).catch(() => { if(current) toast.error("โหลดคลังสื่อไม่สำเร็จ กรุณาลองใหม่"); });
-    return () => { current = false; };
-  }, [site.id, site.isDemo]);
-
-  async function upload(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const file = form.get("file");
-    if (!(file instanceof File) || !file.size) return toast.error("กรุณาเลือกไฟล์");
-    if (site.isDemo) return toast.info("โหมดตัวอย่างไม่บันทึกไฟล์", { description: "สร้างเว็บไซต์ใหม่เพื่อทดลองคลังไฟล์จริง" });
-    form.set("category", category);
-    setUploading(true);
-    try {
-      const response = await fetch(`/api/sites/${site.id}/media`, { method: "POST", body: form });
-      const data = (await response.json()) as { file?: { id: string; fileName: string; url: string }; error?: string };
-      if (!response.ok || !data.file) throw new Error(data.error || "อัปโหลดไม่สำเร็จ");
-      setFiles((current) => [data.file!, ...current]);
-      formElement.reset();
-      toast.success("อัปโหลดไฟล์แล้ว");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  return <div className="space-y-5"><SectionHeading eyebrow="Media Library" title="คลังไฟล์และสื่อ" description="เก็บรูปภาพ วิดีโอ และเอกสารแยกตามเว็บไซต์ พร้อมข้อมูลชื่อ ประเภท ขนาด และผู้เผยแพร่" /><AiImagePanel siteId={site.id} isDemo={site.isDemo} onCreated={file=>setFiles(current=>[file,...current])}/><Card className="border-slate-200 shadow-sm"><CardContent><form onSubmit={upload} className="grid gap-4 lg:grid-cols-[1fr_220px_auto] lg:items-end"><div className="space-y-2"><Label htmlFor="media-file">เลือกไฟล์</Label><Input id="media-file" name="file" type="file" required accept=".pdf,.docx,.xlsx,.pptx,.jpg,.jpeg,.png,.webp,.mp4" className="h-11 pt-1.5" /></div><div className="space-y-2"><Label>ประเภทไฟล์</Label><Select value={category} onValueChange={setCategory}><SelectTrigger className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="document">เอกสาร</SelectItem><SelectItem value="image">รูปภาพ</SelectItem><SelectItem value="video">วิดีโอ</SelectItem><SelectItem value="form">แบบฟอร์ม</SelectItem></SelectContent></Select></div><Button type="submit" className="h-11" disabled={uploading}>{uploading ? <Loader2 className="animate-spin" /> : <CloudUpload />}{uploading ? "กำลังอัปโหลด..." : "อัปโหลด"}</Button></form><p className="mt-3 text-xs text-slate-500">รองรับ PDF, DOCX, XLSX, PPTX, JPG, PNG, WEBP และ MP4 ขนาดไม่เกิน 15 MB</p></CardContent></Card>{files.length ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{files.map((file) => <a key={file.id} href={file.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-[#0b5260]"><span className="flex size-10 items-center justify-center rounded-lg bg-slate-100 text-[#0b5260]"><FileText /></span><span className="min-w-0 flex-1 truncate text-sm font-medium">{file.fileName}</span><ExternalLink className="size-4 text-slate-400" /></a>)}</div> : <Empty className="min-h-64 border border-slate-300 bg-white"><EmptyHeader><EmptyMedia variant="icon"><ImageIcon /></EmptyMedia><EmptyTitle>ยังไม่มีไฟล์</EmptyTitle><EmptyDescription>ไฟล์ที่อัปโหลดจะแสดงที่นี่และนำไปแนบกับข่าวหรือหน้าบริการได้</EmptyDescription></EmptyHeader></Empty>}</div>;
-}
 
 export function AdminWorkspace({ initialSite, initialContent, initialRequests, initialStats, user }: { initialSite: SiteRecord; initialContent: ContentRecord[]; initialRequests: ServiceRequestRecord[]; initialStats: DashboardStats; user: UserView }) {
   const [active, setActive] = useState<Section>("dashboard");
@@ -824,7 +782,7 @@ export function AdminWorkspace({ initialSite, initialContent, initialRequests, i
 
           {active === "procurement" && <><SectionHeading eyebrow="Procurement" title="จัดซื้อจัดจ้าง" description="รองรับแผน ประกาศ ราคากลาง TOR ผู้ชนะ สัญญา และรายงานผล พร้อมค้นหาตามปีและเลขโครงการ" action={<CreateContentDialog site={site} initialType="procurement" onCreated={(item) => setContent((current) => [item, ...current])} />} /><ContentTable content={content.filter((item) => item.type === "procurement")} site={site} onUpdated={updateContent} /></>}
 
-          {active === "media" && <MediaPanel site={site} />}
+          {active === "media" && <MediaLibrary site={site} />}
 
           {active === "people" && <><SectionHeading eyebrow="Role-based access" title="ผู้ใช้และสิทธิ์" description="เจ้าหน้าที่แต่ละกองเห็นเฉพาะงานที่เกี่ยวข้อง ส่วนการอนุมัติและการตั้งค่าหลักสงวนไว้สำหรับผู้มีสิทธิ์" action={<Button variant="outline"><Plus /> เพิ่มเจ้าหน้าที่</Button>} /><div className="grid gap-4 lg:grid-cols-[1fr_.8fr]"><Card className="border-slate-200 shadow-sm"><CardHeader><CardTitle>ผู้ใช้ปัจจุบัน</CardTitle><CardDescription>บัญชีที่มีสิทธิ์เข้าหลังบ้านของเว็บไซต์นี้</CardDescription></CardHeader><CardContent><div className="flex items-center gap-4 rounded-xl border border-slate-200 p-4"><span className="flex size-11 items-center justify-center rounded-xl bg-[#0b5260] font-bold text-white">{initials}</span><div className="min-w-0 flex-1"><p className="truncate font-semibold">{user.displayName}</p><p className="truncate text-sm text-slate-500">{user.email}</p></div><Badge className="bg-[#0b5260]">Super Admin</Badge></div></CardContent></Card><Card className="border-slate-200 shadow-sm"><CardHeader><CardTitle>บทบาทมาตรฐาน</CardTitle><CardDescription>สิทธิ์แยกตามภารกิจของหน่วยงาน</CardDescription></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2">{["ผู้บริหาร", "สำนักปลัด", "กองคลัง", "กองช่าง", "กองการศึกษา", "กองสาธารณสุข", "เจ้าหน้าที่ ITA", "เจ้าหน้าที่จัดซื้อ"].map((role) => <div key={role} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm"><LockKeyhole className="size-3.5 text-slate-500" />{role}</div>)}</CardContent></Card></div></>}
 

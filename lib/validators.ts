@@ -1,4 +1,5 @@
 import { validStartDate } from "@/lib/agency-term";
+import { isWebsiteName } from "@/lib/website-url";
 import { DEFAULT_SECTIONS } from "@/lib/site-template";
 import { z } from "zod";
 import { homepageConfigSchema } from "@/lib/homepage-config";
@@ -27,8 +28,8 @@ export const createSiteSchema = z
       .max(60)
       .regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/)
       .refine(
-        (value) => !["sungnoen-demo","www","admin","api","mail","website","register"].includes(value),
-        "ชื่อ URL นี้สงวนไว้สำหรับตัวอย่าง",
+        isWebsiteName,
+        "ชื่อ URL นี้สงวนไว้สำหรับระบบ กรุณาเลือกชื่ออื่น",
       ),
     organizationType: z.enum([
       "องค์การบริหารส่วนตำบล",
@@ -231,7 +232,7 @@ export const agencyRegistrationSchema = z.object({
 }).strict();
 export const agencyReviewSchema = z.object({
  status:z.enum(["approved","rejected","suspended"]),
- domainLabel:z.string().trim().min(3).max(60).regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/).refine(v=>!["www","admin","api","mail","website","register"].includes(v)),
+ domainLabel:z.string().trim().refine(isWebsiteName,"ชื่อเว็บไซต์ต้องเป็นภาษาอังกฤษ ตัวเลข หรือขีดกลาง 3–60 ตัว และไม่ซ้ำกับชื่อเมนูระบบ"),
  username:accountUsernameSchema.optional(),password:accountPasswordSchema.optional(),
  startOn:z.string().refine(validStartDate,"กรุณาระบุวันส่งงานที่ถูกต้อง").optional(),
 }).strict().refine(value => value.status !== "approved" || Boolean(value.startOn), {message:"กรุณากำหนดวันส่งงาน / วันเริ่มใช้",path:["startOn"]});
