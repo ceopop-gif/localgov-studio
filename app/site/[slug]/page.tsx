@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { getSiteAccessStatus } from "@/lib/site-access";
 import { PublicSiteHome } from "@/components/public-site-home";
 import { DEMO_CONTENT, DEMO_SITE, type ContentRecord } from "@/lib/models";
 import {
@@ -18,13 +19,13 @@ const resolveSite = cache(async (slug: string) => {
   if (slug === DEMO_SITE.slug) return DEMO_SITE;
   try {
     let site = await getPublicSiteBySlug(slug);
-    if (site?.status === "published") return site;
+    if (site?.status === "published" && await getSiteAccessStatus(site.id) === "active") return site;
 
     const user = await getChatGPTUser();
     if (!user) return null;
     if (!site && slug === SUNG_NOEN_SITE_SLUG)
       site = await ensureSungNoenSiteForUser(user.id, user.email);
-    return site && (await getManagedSite(site.id, user.id)) ? site : null;
+    return site && (await getManagedSite(site.id, user.id)) ? { ...site, status: "draft" as const } : null;
   } catch (error) {
     console.error("public site unavailable", error);
     return null;
@@ -88,7 +89,7 @@ export default async function PublicSitePage({
       {!site.isDemo && site.status !== "published" && (
         <div className="flex flex-wrap items-center justify-center gap-3 bg-amber-100 px-4 py-3 text-sm text-amber-950">
           <span>
-            ตัวอย่างสำหรับผู้ดูแล · เว็บไซต์ยังไม่เผยแพร่และยังไม่เปิดรับคำร้อง
+            ตัวอย่างสำหรับผู้ดูแล · เว็บไซต์ยังไม่เปิดให้บริการประชาชน
           </span>
           <a
             href={`/admin/${site.id}`}

@@ -16,9 +16,9 @@ BEGIN
  IF result->>'approvalStatus'<>'pending' THEN RAISE EXCEPTION 'Public registration auto-approved'; END IF;
  result:=localgov.login_site_admin('',uid,pass,token);
  IF result->>'ok'<>'false' OR result->>'pending'<>'true' OR EXISTS(SELECT 1 FROM localgov.local_admin_sessions WHERE id=token) THEN RAISE EXCEPTION 'Pending account logged in'; END IF;
- BEGIN PERFORM localgov.review_agency(sid,'site-admin:'||sid,'approved',sid,NULL,NULL); EXCEPTION WHEN insufficient_privilege THEN rejected:=true; END;
+ BEGIN PERFORM localgov.review_agency(sid,'site-admin:'||sid,'approved',sid,NULL,NULL,(now() AT TIME ZONE 'Asia/Bangkok')::date); EXCEPTION WHEN insufficient_privilege THEN rejected:=true; END;
  IF NOT rejected THEN RAISE EXCEPTION 'Tenant self-approved'; END IF;
- PERFORM localgov.review_agency(sid,admin_id,'approved',sid,NULL,NULL);
+ PERFORM localgov.review_agency(sid,admin_id,'approved',sid,NULL,NULL,(now() AT TIME ZONE 'Asia/Bangkok')::date);
  result:=localgov.login_site_admin('',uid,pass,token);
  IF result->>'ok'<>'true' OR result->>'siteId'<>sid THEN RAISE EXCEPTION 'Approved login failed'; END IF;
  IF localgov.resolve_site_admin_session(token)->>'siteId'<>sid THEN RAISE EXCEPTION 'Wrong tenant session'; END IF;

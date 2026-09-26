@@ -22,6 +22,16 @@ export async function POST(request: Request) {
         { status: 429, headers: { ...NO_STORE_HEADERS, "retry-after": "300" } },
       );
       if (session.pending) return Response.json({error:"ลงทะเบียนแล้ว กำลังรอผู้ดูแลระบบอนุมัติ", pending:true}, {status:403,headers:NO_STORE_HEADERS});
+      if (session.accessStatus) {
+        const messages: Record<string,string> = {
+          suspended:"หน่วยงานนี้ถูกหยุดใช้งาน กรุณาติดต่อผู้ดูแลส่วนกลาง",
+          expired:"เว็บไซต์หมดอายุใช้งานแล้ว กรุณาติดต่อผู้ดูแลส่วนกลาง",
+          scheduled:"ยังไม่ถึงวันส่งงาน / วันเริ่มใช้งานที่กำหนด",
+          awaiting_start:"รอผู้ดูแลส่วนกลางกำหนดวันส่งงาน / วันเริ่มใช้",
+          rejected:"คำขอยังไม่ได้รับอนุมัติ กรุณาติดต่อผู้ดูแลส่วนกลาง",
+        };
+        return Response.json({error:messages[session.accessStatus]||"หน่วยงานยังไม่เปิดใช้งาน"},{status:403,headers:NO_STORE_HEADERS});
+      }
       return invalidCredentials();
     }
     const response = Response.json(

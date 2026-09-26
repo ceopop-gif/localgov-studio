@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -15,8 +15,11 @@ export function loader(mocks = {}) {
     if (cache.has(name)) return cache.get(name);
     const exports = {};
     cache.set(name, exports);
-    runInNewContext(ts.transpileModule(readFileSync(path.join(root, name.slice(2)) + '.ts', 'utf8'), {
-      compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}
+    const base = path.join(root, name.slice(2));
+    const file = existsSync(base + '.ts') ? base + '.ts' : base + '.tsx';
+    runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {
+      fileName: file,
+      compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX}
     }).outputText, { exports, require: dependency => load(dependency, name), Request, Response, URL, URLSearchParams, TextEncoder, crypto, Headers, AbortSignal, atob, console: {error() {}} });
     return exports;
   }

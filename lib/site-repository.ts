@@ -1,6 +1,7 @@
 import { supabaseRest } from "@/db/supabase-rest";
 import { rows, createRecord, runOperation, toDatabase } from "@/db/repository";
 import { MASTER_TEMPLATE_NAME, MASTER_TEMPLATE_SITE_ID } from "@/lib/template-identity";
+import { getSiteAccessStatus } from "@/lib/site-access";
 import type {
   ContentRecord,
   DashboardStats,
@@ -250,6 +251,7 @@ export async function getManagedSite(siteId:string,userId:string):Promise<SiteRe
   const [site] = await rows("sites", {id:`eq.${siteId}`,limit:"1"});
   if (!site) return null;
   if (await runOperation<boolean>("is_platform_admin",{p_user_id:userId})) return site;
+  if (await getSiteAccessStatus(siteId) !== "active") return null;
   if (site.ownerUserId === userId) return site;
   const [membership] = await rows("site_members", {site_id:`eq.${siteId}`,user_id:`eq.${userId}`,active:"eq.true",limit:"1"});
   return membership ? site : null;
@@ -258,7 +260,9 @@ export async function getPublicSiteBySlug(slug:string):Promise<SiteRecord|null> 
   return (await rows("sites", {slug:`eq.${slug}`,limit:"1"}))[0] ?? null;
 }
 export async function listPublishedSites():Promise<SiteRecord[]> {
-  return rows("sites", {status:"eq.published",order:"updated_at.desc"});
+  const sites = await rows("sites", {status:"eq.published",order:"updated_at.desc"});
+  const statuses = await Promise.all(sites.map(site => getSiteAccessStatus(site.id)));
+  return sites.filter((_, index) => statuses[index] === "active");
 }
 export async function listContentForSite(siteId:string):Promise<ContentRecord[]> {
   if (siteId === SUNG_NOEN_SITE_ID) await ensureSungNoenExampleArticles();

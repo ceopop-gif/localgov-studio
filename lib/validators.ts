@@ -1,3 +1,4 @@
+import { validStartDate } from "@/lib/agency-term";
 import { DEFAULT_SECTIONS } from "@/lib/site-template";
 import { z } from "zod";
 import { homepageConfigSchema } from "@/lib/homepage-config";
@@ -232,4 +233,5 @@ export const agencyReviewSchema = z.object({
  status:z.enum(["approved","rejected","suspended"]),
  domainLabel:z.string().trim().min(3).max(60).regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/).refine(v=>!["www","admin","api","mail","website","register"].includes(v)),
  username:accountUsernameSchema.optional(),password:accountPasswordSchema.optional(),
-}).strict();
+ startOn:z.string().refine(validStartDate,"กรุณาระบุวันส่งงานที่ถูกต้อง").optional(),
+}).strict().refine(value => value.status !== "approved" || Boolean(value.startOn), {message:"กรุณากำหนดวันส่งงาน / วันเริ่มใช้",path:["startOn"]});

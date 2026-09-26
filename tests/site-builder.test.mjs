@@ -19,6 +19,7 @@ function loader(mocks = {}) {
     cache.set(name, exports);
     runInNewContext(
       ts.transpileModule(readFileSync(file, "utf8"), {
+        fileName: file,
         compilerOptions: {
           module: ts.ModuleKind.CommonJS,
           target: ts.ScriptTarget.ES2022,
@@ -183,6 +184,7 @@ test("draft metadata and pages are visible only to that site's managers", async 
   ]) {
     const route = loader({
       react: { cache: (fn) => fn },
+      "@/lib/site-access": {getSiteAccessStatus:async()=>"active"},
       "@/components/public-site-home": { PublicSiteHome: () => null },
       "@/app/chatgpt-auth": { getChatGPTUser: async () => user },
       "@/lib/site-repository": {

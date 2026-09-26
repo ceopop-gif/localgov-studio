@@ -2,6 +2,7 @@ import { rows, createRecord } from "@/db/repository";
 import { DEMO_SITE } from "@/lib/models";
 import { createRequestSchema } from "@/lib/validators";
 import { rejectCrossOriginWrite } from "@/lib/request-security";
+import { getSiteAccessStatus } from "@/lib/site-access";
 
 function trackingCode() {
   const date = new Date().toISOString().slice(2, 10).replaceAll("-", "");
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
       status: "eq.published",
       limit: "1",
     });
-    if (!site)
+    if (!site || await getSiteAccessStatus(site.id) !== "active")
       return Response.json(
         { error: "ไม่พบหน่วยงานที่ต้องการส่งเรื่อง" },
         { status: 404 },
@@ -107,7 +108,7 @@ export async function GET(request: Request) {
       select: "id",
       limit: "1",
     });
-    const [row] = site
+    const [row] = site && await getSiteAccessStatus(site.id) === "active"
       ? await rows("service_requests", {
           site_id: `eq.${site.id}`,
           tracking_code: `eq.${code}`,

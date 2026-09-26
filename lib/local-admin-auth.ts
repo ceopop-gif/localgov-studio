@@ -1,3 +1,5 @@
+import { getSiteAccessStatus } from "@/lib/site-access";
+import type { AgencyAccessStatus } from "@/lib/agency-term";
 import * as legacy from "@/lib/legacy-local-admin";
 import { rows, runOperation, toDatabase } from "@/db/repository";
 
@@ -12,13 +14,15 @@ export type LocalAdminIdentity = {
   displayName: string;
 };
 
-type LoginResult = { ok: false; blocked?: boolean; pending?: boolean } | { ok: true; siteId?: string; platform?: boolean; expiresAt?: string };
-export async function createLocalAdminSession(siteSlug: string, username: string, password: string, platform = false): Promise<{ok:false;blocked?:boolean;pending?:boolean}|{ok:true;token:string;siteId?:string;platform?:boolean;expiresAt?:string}> {
+type LoginResult = { ok: false; blocked?: boolean; pending?: boolean; accessStatus?: AgencyAccessStatus } | { ok: true; siteId?: string; platform?: boolean; expiresAt?: string };
+export async function createLocalAdminSession(siteSlug: string, username: string, password: string, platform = false): Promise<{ok:false;blocked?:boolean;pending?:boolean;accessStatus?:AgencyAccessStatus}|{ok:true;token:string;siteId?:string;platform?:boolean;expiresAt?:string}> {
   // Preserve the existing Sung Noen account without granting platform access.
   if (!platform && username === "admin" && (!siteSlug || siteSlug === "sung-noen")) {
     const allowed = await runOperation<boolean>("consume_request_limit", {p_key:"legacy-admin-login",p_limit:20,p_seconds:900});
     if (!allowed) return {ok:false,blocked:true} as const;
     if (await legacy.verifyLocalAdminCredentials(username,password)) {
+      const accessStatus = await getSiteAccessStatus("sung-noen-municipality");
+      if (accessStatus !== "active") return {ok:false,accessStatus};
       const session = await legacy.createLocalAdminSession();
       return {ok:true,token:session.token,siteId:"sung-noen-municipality",expiresAt:session.expiresAt.toISOString()} as const;
     }
@@ -39,7 +43,7 @@ export async function getLocalAdminIdentity(cookieHeader: string | null): Promis
   const identity=await runOperation<LocalAdminIdentity | null>("resolve_platform_session", args) ?? await runOperation<LocalAdminIdentity | null>("resolve_site_admin_session", args);
   if(identity)return identity;
   const previous=await legacy.getLocalAdminIdentity(cookieHeader);
-  if(previous && previous.id===legacy.LOCAL_ADMIN_USER_ID&&previous.siteId==="sung-noen-municipality")return {...previous,email:legacy.LOCAL_ADMIN_EMAIL,displayName:"ผู้ดูแลเว็บไซต์สูงเนิน"};
+  if(previous && previous.id===legacy.LOCAL_ADMIN_USER_ID&&previous.siteId==="sung-noen-municipality" && await getSiteAccessStatus(previous.siteId)==="active")return {...previous,email:legacy.LOCAL_ADMIN_EMAIL,displayName:"ผู้ดูแลเทศบาลต้นฉบับ"};
   return null;
 }
 
