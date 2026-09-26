@@ -55,15 +55,19 @@ export function PlatformDashboard({
   initialSites,
   user,
   loadError = "",
+  startCreating = false,
 }: {
   initialSites: SiteRecord[];
   user: { displayName: string; email: string };
   loadError?: string;
+  startCreating?: boolean;
 }) {
   const [sites, setSites] = useState(initialSites);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
-  const [wizard, setWizard] = useState<{ source?: SiteRecord } | null>(null);
+  const [wizard, setWizard] = useState<{ source?: SiteRecord } | null>(
+    startCreating && !loadError ? {} : null,
+  );
   const visible = sites.filter(
     (site) =>
       (status === "all" || site.status === status) &&

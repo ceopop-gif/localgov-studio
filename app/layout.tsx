@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://localgov-studio.bbb78987.chatgpt.site"),
+  metadataBase: new URL("https://weblocalgov.com"),
   title: {
     default: "LocalGov Studio — ระบบเว็บไซต์ท้องถิ่นหลายหน่วยงาน",
     template: "%s | LocalGov Studio",

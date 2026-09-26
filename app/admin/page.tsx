@@ -10,7 +10,10 @@ export const metadata: Metadata = {
   title: "ศูนย์สร้างเว็บไซต์ อบต. / เทศบาล",
   robots: { index: false, follow: false },
 };
-export default async function PlatformAdminPage() {
+export default async function PlatformAdminPage({ searchParams }: {
+  searchParams: Promise<{ new?: string }>;
+}) {
+  const startCreating = (await searchParams).new === "1";
   const user = await getChatGPTUser();
   if (!user || user.authSource !== "chatgpt")
     return (
@@ -29,8 +32,8 @@ export default async function PlatformAdminPage() {
             สร้างเว็บไซต์ใหม่จากต้นฉบับเดียวกัน และดูแลเว็บไซต์ของคุณจากที่เดียว
           </p>
           <Button asChild className="mt-7 h-12 w-full text-base">
-            <a href={chatGPTSignInPath("/admin")} target="_top">
-              เข้าสู่ระบบส่วนกลางด้วย ChatGPT <ArrowRight />
+            <a href={chatGPTSignInPath(startCreating ? "/admin?new=1" : "/admin")} target="_top">
+              {startCreating ? "ลงทะเบียนสร้างเว็บด้วย ChatGPT" : "เข้าสู่ระบบส่วนกลางด้วย ChatGPT"} <ArrowRight />
             </a>
           </Button>
           {user?.authSource === "local" && (
@@ -60,6 +63,7 @@ export default async function PlatformAdminPage() {
       initialSites={sites}
       user={{ displayName: user.displayName, email: user.email }}
       loadError={error}
+      startCreating={startCreating}
     />
   );
 }
