@@ -24,13 +24,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function LocalAdminLogin({
-  chatGPTSignInUrl,
   localReturnTo,
   siteSlug,
   siteName,
   platform = false,
 }: {
-  chatGPTSignInUrl: string;
   localReturnTo: string;
   siteSlug?: string;
   siteName?: string;
@@ -89,19 +87,19 @@ export function LocalAdminLogin({
             </div>
             <div className="mt-10 max-w-md">
               <Badge className="border border-white/15 bg-white/10 text-white hover:bg-white/10">
-                หลังบ้าน อบต. / เทศบาล
+                {platform ? "หลังบ้านใหญ่" : "หลังบ้าน อบต. / เทศบาล"}
               </Badge>
               <h1 className="thai-balance mt-5 text-3xl font-black leading-tight sm:text-4xl">
                 {siteName || "เว็บไซต์ของหน่วยงานคุณ"}
               </h1>
               <p className="mt-4 text-base leading-7 text-slate-300">
-                จัดการหน้าแรก ข่าว บทความ รูปภาพ เอกสาร ITA/OIT จัดซื้อจัดจ้าง และคำร้องประชาชนจากที่เดียว
+                {platform ? "อนุมัติหน่วยงาน จัดการบัญชีเจ้าหน้าที่ และตั้งโดเมนเว็บไซต์จากส่วนกลาง" : "จัดการหน้าแรก ข่าว บทความ รูปภาพ เอกสาร ITA/OIT จัดซื้อจัดจ้าง และคำร้องประชาชนจากที่เดียว"}
               </p>
             </div>
           </div>
           <div className="relative mt-8 hidden items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-200 lg:flex">
             <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#e4b949]" />
-            บัญชีแยกตามหน่วยงาน ทุกการแก้ไขตรวจสิทธิ์จากระบบ และเซสชันหมดอายุอัตโนมัติภายใน 8 ชั่วโมง
+            {platform ? "สำหรับผู้ดูแลระบบส่วนกลาง เซสชันหมดอายุอัตโนมัติภายใน 8 ชั่วโมง" : "บัญชีแยกตามหน่วยงาน ทุกการแก้ไขตรวจสิทธิ์จากระบบ และเซสชันหมดอายุอัตโนมัติภายใน 8 ชั่วโมง"}
           </div>
         </div>
 
@@ -113,7 +111,7 @@ export function LocalAdminLogin({
                   <LockKeyhole className="size-5" />
                 </span>
                 <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
-                  บัญชีหน่วยงาน
+                  {platform ? "ผู้ดูแลส่วนกลาง" : "บัญชีหน่วยงาน"}
                 </Badge>
               </div>
               <CardTitle className="mt-5 text-2xl font-black text-slate-950 sm:text-3xl">
@@ -191,11 +189,10 @@ export function LocalAdminLogin({
               {!platform && <p className="mt-5 text-center text-sm">ยังไม่มีบัญชี? <a href="/register" className="font-semibold text-cyan-800 underline">ลงทะเบียนหน่วยงาน</a></p>}
               <div className="mt-6 border-t border-slate-200 pt-5 text-center">
                 <a
-                  href={chatGPTSignInUrl}
-                  target="_top"
+                  href={platform ? "/website" : "/admin/login"}
                   className="text-sm font-semibold text-[#0b5260] underline-offset-4 hover:underline"
                 >
-                  ผู้ดูแลระบบกลางเข้าสู่ระบบด้วย ChatGPT
+                  {platform ? "เข้าสู่หลังบ้านหน่วยงาน" : "เข้าสู่หลังบ้านใหญ่"}
                 </a>
               </div>
             </CardContent>

@@ -61,3 +61,22 @@ test('local login wins on site routes while central registration can use trusted
   assert.equal((await auth.getChatGPTUser()).siteId,'tenant-a');
   assert.equal((await auth.getChatGPTUser({preferChatGPT:true})).id,'owner');
 });
+
+test('platform access requires a local platform session and an active platform role',async()=>{
+ for(const [user,active,allowed] of [
+  [{id:'owner',authSource:'chatgpt',platform:true},true,false],
+  [{id:'site-admin:one',authSource:'local',siteId:'one'},true,false],
+  [{id:'platform-admin',authSource:'local',platform:true},false,false],
+  [{id:'platform-admin',authSource:'local',platform:true},true,true],
+ ]){
+  let lookups=0;
+  const platform=loader({'@/app/chatgpt-auth':{getChatGPTUser:async()=>user},'@/db/repository':{runOperation:async(name,args)=>{lookups++;assert.equal(name,'is_platform_admin');assert.equal(args.p_user_id,user.id);return active;}}})('@/lib/platform');
+  assert.equal(Boolean(await platform.getPlatformUser()),allowed);
+  if(user.authSource==='chatgpt'||!user.platform)assert.equal(lookups,0);
+ }
+});
+test('platform login redirects to the central console and never uses the legacy tenant account',async()=>{
+ const route=loader({'@/db/repository':{runOperation:async(name,args)=>{assert.equal(name,'login_platform_admin');assert.equal(args.p_username,'admin');assert.equal(args.p_site_slug,undefined);return{ok:true,platform:true};}},'@/lib/legacy-local-admin':{verifyLocalAdminCredentials:()=>assert.fail('Legacy login must not be used')}})('@/app/api/auth/local/login/route');
+ const response=await route.POST(request({platform:true,username:'admin',siteSlug:''}));
+ assert.equal(response.status,200);assert.equal((await response.json()).redirectTo,'/admin');assert.match(response.headers.get('set-cookie'),/HttpOnly; Secure/);
+});

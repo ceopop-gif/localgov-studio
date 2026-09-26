@@ -7,6 +7,6 @@ export type AgencyRegistration = {
 };
 export async function getPlatformUser() {
  const user=await getChatGPTUser();
- if(!user) return null;
+ if(!user || user.authSource !== "local" || !user.platform) return null;
  return await runOperation<boolean>("is_platform_admin",{p_user_id:user.id}) ? user : null;
 }

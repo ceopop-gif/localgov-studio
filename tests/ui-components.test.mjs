@@ -104,7 +104,6 @@ test("renders the municipal admin login without exposing demo credentials", asyn
   );
   const html = renderToStaticMarkup(
     React.createElement(LocalAdminLogin, {
-      chatGPTSignInUrl: "/signin-with-chatgpt?return_to=%2Fadmin",
       localReturnTo: "/admin/sung-noen-municipality",
     }),
   );
@@ -114,6 +113,12 @@ test("renders the municipal admin login without exposing demo credentials", asyn
   assert.match(html, /name="password"/);
   assert.match(html, /type="password"/);
   assert.doesNotMatch(html, /value="admin"/);
+  assert.doesNotMatch(html, /ChatGPT|signin-with-chatgpt/);
+  const platformHtml=renderToStaticMarkup(React.createElement(LocalAdminLogin,{platform:true,siteName:"ศูนย์บริหาร WebLocalGov",localReturnTo:"/admin"}));
+  assert.match(platformHtml,/เข้าสู่หลังบ้านใหญ่/);
+  assert.match(platformHtml,/name="username"/);
+  assert.match(platformHtml,/name="password"/);
+  assert.doesNotMatch(platformHtml,/ChatGPT|signin-with-chatgpt/);
 });
 
 
