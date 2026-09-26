@@ -26,9 +26,15 @@ import { Label } from "@/components/ui/label";
 export function LocalAdminLogin({
   chatGPTSignInUrl,
   localReturnTo,
+  siteSlug,
+  siteName,
+  platform = false,
 }: {
   chatGPTSignInUrl: string;
   localReturnTo: string;
+  siteSlug?: string;
+  siteName?: string;
+  platform?: boolean;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -45,6 +51,8 @@ export function LocalAdminLogin({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          siteSlug: siteSlug ?? "",
+          platform,
           username: form.get("username"),
           password: form.get("password"),
         }),
@@ -81,10 +89,10 @@ export function LocalAdminLogin({
             </div>
             <div className="mt-10 max-w-md">
               <Badge className="border border-white/15 bg-white/10 text-white hover:bg-white/10">
-                หลังบ้านเทศบาล
+                หลังบ้าน อบต. / เทศบาล
               </Badge>
               <h1 className="thai-balance mt-5 text-3xl font-black leading-tight sm:text-4xl">
-                เทศบาลตำบลสูงเนิน
+                {siteName || "เว็บไซต์ของหน่วยงานคุณ"}
               </h1>
               <p className="mt-4 text-base leading-7 text-slate-300">
                 จัดการหน้าแรก ข่าว บทความ รูปภาพ เอกสาร ITA/OIT จัดซื้อจัดจ้าง และคำร้องประชาชนจากที่เดียว
@@ -93,7 +101,7 @@ export function LocalAdminLogin({
           </div>
           <div className="relative mt-8 hidden items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-200 lg:flex">
             <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#e4b949]" />
-            ทุกการแก้ไขตรวจสิทธิ์จากระบบ และเซสชันบัญชีทดลองจะหมดอายุอัตโนมัติภายใน 8 ชั่วโมง
+            บัญชีแยกตามหน่วยงาน ทุกการแก้ไขตรวจสิทธิ์จากระบบ และเซสชันหมดอายุอัตโนมัติภายใน 8 ชั่วโมง
           </div>
         </div>
 
@@ -105,11 +113,11 @@ export function LocalAdminLogin({
                   <LockKeyhole className="size-5" />
                 </span>
                 <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
-                  บัญชีทดลอง
+                  บัญชีหน่วยงาน
                 </Badge>
               </div>
               <CardTitle className="mt-5 text-2xl font-black text-slate-950 sm:text-3xl">
-                เข้าสู่ระบบเจ้าหน้าที่
+                {platform ? "เข้าสู่หลังบ้านใหญ่" : "เข้าสู่ระบบเจ้าหน้าที่"}
               </CardTitle>
               <CardDescription className="text-base leading-7 text-slate-600">
                 กรอกชื่อผู้ใช้และรหัสผ่านเพื่อเปิดระบบหลังบ้าน
@@ -168,14 +176,6 @@ export function LocalAdminLogin({
                   </Alert>
                 )}
 
-                <Alert className="border-amber-200 bg-amber-50 text-amber-950">
-                  <ShieldCheck />
-                  <AlertTitle>สำหรับตรวจระบบเท่านั้น</AlertTitle>
-                  <AlertDescription className="text-amber-800">
-                    ควรเปลี่ยนเป็นรหัสที่คาดเดายากและเปิด 2FA ก่อนใช้งานจริง
-                  </AlertDescription>
-                </Alert>
-
                 <Button
                   type="submit"
                   size="lg"
@@ -188,6 +188,7 @@ export function LocalAdminLogin({
                 </Button>
               </form>
 
+              {!platform && <p className="mt-5 text-center text-sm">ยังไม่มีบัญชี? <a href="/register" className="font-semibold text-cyan-800 underline">ลงทะเบียนหน่วยงาน</a></p>}
               <div className="mt-6 border-t border-slate-200 pt-5 text-center">
                 <a
                   href={chatGPTSignInUrl}

@@ -4,7 +4,7 @@ import { env } from "cloudflare:workers";
 export const TABLES = ["sites", "site_members", "content_items", "service_requests", "media_files", "audit_logs", "local_admin_sessions"] as const;
 export type LocalGovTable = typeof TABLES[number];
 export type RecordData = Record<string, unknown>;
-const RPCS = ["create_site", "update_site", "create_content", "update_content", "create_request", "update_request", "create_media", "create_session", "delete_session", "dashboard_stats"] as const;
+const RPCS = ["resolve_domain", "is_platform_admin", "consume_request_limit", "register_agency", "review_agency", "list_agencies", "login_platform_admin", "resolve_platform_session", "delete_platform_session", "reserve_ai_image", "finish_ai_image", "create_site", "create_site_with_admin", "login_site_admin", "resolve_site_admin_session", "update_site", "create_content", "update_content", "create_request", "update_request", "create_media", "create_session", "delete_session", "dashboard_stats"] as const;
 export type LocalGovRpc = typeof RPCS[number];
 
 function configuration() {

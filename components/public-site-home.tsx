@@ -460,11 +460,13 @@ export function PublicSiteHome({ site, content }: { site: SiteRecord; content: C
   const locationText = [site.subdistrict && `ต.${site.subdistrict}`, site.district && `อ.${site.district}`, site.province && `จ.${site.province}`].filter(Boolean).join(" ");
   const primaryPhone = site.phone?.split(",")[0]?.trim() || "";
   const phoneHref = primaryPhone ? `tel:${primaryPhone.replace(/[^0-9+]/g, "")}` : "#ติดต่อเรา";
-  const officeMapUrl = site.address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address)}`
+  const officeLocation = homepage.contact.officeLocation;
+  const officeQuery = officeLocation?.latitude && officeLocation?.longitude ? `${officeLocation.latitude},${officeLocation.longitude}` : [site.address, site.subdistrict, site.district, site.province].filter(Boolean).join(" ");
+  const officeMapUrl = officeQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(officeQuery)}`
     : "";
-  const officeMapEmbedUrl = site.address
-    ? `https://www.google.com/maps?q=${encodeURIComponent(site.address)}&z=16&output=embed`
+  const officeMapEmbedUrl = officeQuery
+    ? `https://www.google.com/maps?q=${encodeURIComponent(officeQuery)}&z=16&output=embed`
     : "";
 
   const navigation = [

@@ -1,80 +1,58 @@
-import { env } from "cloudflare:workers";
+import * as legacy from "@/lib/legacy-local-admin";
 import { rows, runOperation, toDatabase } from "@/db/repository";
-import { SUNG_NOEN_SITE_ID } from "@/lib/site-repository";
 
 export const LOCAL_ADMIN_COOKIE_NAME = "__Host-localgov_admin_session";
-export const LOCAL_ADMIN_USER_ID = "local-admin-demo";
-export const LOCAL_ADMIN_EMAIL = "admin@demo.localgov";
-export const LOCAL_ADMIN_DISPLAY_NAME = "admin (บัญชีทดลอง)";
 export const LOCAL_ADMIN_SESSION_SECONDS = 8 * 60 * 60;
-
-// Credential digests are server secrets; no default credentials in source.
-function credentialDigest(key:"LOCAL_ADMIN_USERNAME_SHA256"|"LOCAL_ADMIN_PASSWORD_SHA256"):string {
-  const value=env[key];
-  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value) ? value : "";
-}
-
 export type LocalAdminIdentity = {
   id: string;
-  siteId: string;
+  siteId?: string;
+  platform?: boolean;
   username: string;
+  email: string;
+  displayName: string;
 };
 
-export async function verifyLocalAdminCredentials(
-  username: string,
-  password: string,
-): Promise<boolean> {
-  const [usernameDigest, passwordDigest] = await Promise.all([
-    sha256Hex(username),
-    sha256Hex(password),
-  ]);
-
-  return (
-    constantTimeEqual(usernameDigest, credentialDigest("LOCAL_ADMIN_USERNAME_SHA256")) &&
-    constantTimeEqual(passwordDigest, credentialDigest("LOCAL_ADMIN_PASSWORD_SHA256"))
-  );
-}
-
-export async function createLocalAdminSession(): Promise<{
-  token: string;
-  expiresAt: Date;
-}> {
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + LOCAL_ADMIN_SESSION_SECONDS * 1000);
+type LoginResult = { ok: false; blocked?: boolean; pending?: boolean } | { ok: true; siteId?: string; platform?: boolean; expiresAt?: string };
+export async function createLocalAdminSession(siteSlug: string, username: string, password: string, platform = false): Promise<{ok:false;blocked?:boolean;pending?:boolean}|{ok:true;token:string;siteId?:string;platform?:boolean;expiresAt?:string}> {
+  // Preserve the existing Sung Noen account without granting platform access.
+  if (!platform && username === "admin" && (!siteSlug || siteSlug === "sung-noen")) {
+    const allowed = await runOperation<boolean>("consume_request_limit", {p_key:"legacy-admin-login",p_limit:20,p_seconds:900});
+    if (!allowed) return {ok:false,blocked:true} as const;
+    if (await legacy.verifyLocalAdminCredentials(username,password)) {
+      const session = await legacy.createLocalAdminSession();
+      return {ok:true,token:session.token,siteId:"sung-noen-municipality",expiresAt:session.expiresAt.toISOString()} as const;
+    }
+    return {ok:false} as const;
+  }
   const token = randomToken();
-  const sessionId = await sha256Hex(token);
-  await runOperation("create_session", {
-    p_data:toDatabase({id:sessionId,siteId:SUNG_NOEN_SITE_ID,userId:LOCAL_ADMIN_USER_ID,username:"admin",expiresAt:expiresAt.toISOString()}),
-    p_member:toDatabase({id:"local-admin-demo-sung-noen",siteId:SUNG_NOEN_SITE_ID,userId:LOCAL_ADMIN_USER_ID,email:LOCAL_ADMIN_EMAIL,role:"super_admin",department:"บัญชีทดลอง",active:true}),
-    p_audit:toDatabase({id:crypto.randomUUID(),siteId:SUNG_NOEN_SITE_ID,actorUserId:LOCAL_ADMIN_USER_ID,actorEmail:LOCAL_ADMIN_EMAIL,action:"auth.login",entityType:"session",entityId:sessionId,metadata:JSON.stringify({auth:"local_demo",expiresInHours:8})}),
+  const result = await runOperation<LoginResult>(platform ? "login_platform_admin" : "login_site_admin", {
+    ...(!platform ? {p_site_slug: siteSlug} : {}), p_username: username, p_password: password,
+    p_session_hash: await sha256Hex(token),
   });
-
-  return { token, expiresAt };
+  return result.ok ? { ...result, token } : result;
 }
 
-export async function getLocalAdminIdentity(
-  cookieHeader: string | null,
-): Promise<LocalAdminIdentity | null> {
+export async function getLocalAdminIdentity(cookieHeader: string | null): Promise<LocalAdminIdentity | null> {
   const token = readCookie(cookieHeader, LOCAL_ADMIN_COOKIE_NAME);
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-
-  const sessionId = await sha256Hex(token);
-  const [session] = await rows("local_admin_sessions", {id:`eq.${sessionId}`,expires_at:`gt.${new Date().toISOString()}`,limit:"1"});
-  return session ? {id:session.userId,siteId:session.siteId,username:session.username} : null;
+  const args = { p_session_hash: await sha256Hex(token) };
+  const identity=await runOperation<LocalAdminIdentity | null>("resolve_platform_session", args) ?? await runOperation<LocalAdminIdentity | null>("resolve_site_admin_session", args);
+  if(identity)return identity;
+  const previous=await legacy.getLocalAdminIdentity(cookieHeader);
+  if(previous && previous.id===legacy.LOCAL_ADMIN_USER_ID&&previous.siteId==="sung-noen-municipality")return {...previous,email:legacy.LOCAL_ADMIN_EMAIL,displayName:"ผู้ดูแลเว็บไซต์สูงเนิน"};
+  return null;
 }
 
-export async function deleteLocalAdminSession(
-  cookieHeader: string | null,
-): Promise<void> {
+export async function deleteLocalAdminSession(cookieHeader: string | null): Promise<void> {
   const token = readCookie(cookieHeader, LOCAL_ADMIN_COOKIE_NAME);
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return;
-
   const sessionId = await sha256Hex(token);
+  await runOperation("delete_platform_session", {p_session_hash:sessionId});
   const [session] = await rows("local_admin_sessions", {id:`eq.${sessionId}`,limit:"1"});
   if (!session) return;
   await runOperation("delete_session", {p_id:sessionId,p_audit:toDatabase({
-    id:crypto.randomUUID(),siteId:session.siteId,actorUserId:session.userId,actorEmail:LOCAL_ADMIN_EMAIL,
-    action:"auth.logout",entityType:"session",entityId:sessionId,metadata:JSON.stringify({auth:"local_demo"}),
+    id:crypto.randomUUID(),siteId:session.siteId,actorUserId:session.userId,actorEmail:"",
+    action:"auth.logout",entityType:"session",entityId:sessionId,metadata:JSON.stringify({auth:"site_admin"}),
   })});
 }
 
@@ -124,13 +102,4 @@ async function sha256Hex(value: string): Promise<string> {
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function constantTimeEqual(left: string, right: string): boolean {
-  if (left.length !== right.length) return false;
-  let difference = 0;
-  for (let index = 0; index < left.length; index += 1) {
-    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
-  }
-  return difference === 0;
 }

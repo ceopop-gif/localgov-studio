@@ -26,7 +26,7 @@ export const createSiteSchema = z
       .max(60)
       .regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/)
       .refine(
-        (value) => value !== "sungnoen-demo",
+        (value) => !["sungnoen-demo","www","admin","api","mail","website","register"].includes(value),
         "ชื่อ URL นี้สงวนไว้สำหรับตัวอย่าง",
       ),
     organizationType: z.enum([
@@ -51,6 +51,15 @@ export const createSiteSchema = z
     email: z.string().trim().email().or(z.literal("")).default(""),
     vision: z.string().trim().max(1000).default(""),
     logoUrl: siteAssetUrlSchema.default(""),
+    registration: z.object({
+      postalCode: z.string().regex(/^[0-9]{5}$/),
+      officerName: z.string().trim().min(2).max(160),
+      officerPosition: z.string().trim().min(2).max(160),
+      officerPhone: z.string().trim().min(8).max(50),
+      latitude: z.string().refine(v => v === "" || (Number.isFinite(Number(v)) && Math.abs(Number(v)) <= 90)),
+      longitude: z.string().refine(v => v === "" || (Number.isFinite(Number(v)) && Math.abs(Number(v)) <= 180)),
+      consent: z.literal(true),
+    }).strict().optional(),
     sourceSiteId: z
       .string()
       .trim()
@@ -202,7 +211,25 @@ export const updateRequestSchema = z.object({
 
 export const localAdminLoginSchema = z
   .object({
-    username: z.string().trim().min(1).max(80),
-    password: z.string().min(1).max(128),
+    siteSlug: z.string().trim().max(80).regex(/^(?:[a-z0-9]+(?:-[a-z0-9]+)*)?$/).default(""),
+    platform:z.boolean().default(false),
+    username: z.string().trim().toLowerCase().min(1).max(80),
+    password: z.string().min(1).max(72).refine(value => new TextEncoder().encode(value).length <= 72),
   })
   .strict();
+
+export const accountUsernameSchema = z.string().trim().toLowerCase().regex(/^[a-z][a-z0-9._-]{2,39}$/).refine(v=>!["admin","root","system"].includes(v));
+export const accountPasswordSchema = z.string().min(12).max(72).refine(v=>new TextEncoder().encode(v).length<=72);
+export const agencyRegistrationSchema = z.object({
+ site: createSiteSchema.omit({sourceSiteId:true}),
+ username: accountUsernameSchema,
+ password: accountPasswordSchema,
+ contactName:z.string().trim().min(2).max(160),
+ consent:z.literal(true),
+ website:z.string().max(0).optional(),
+}).strict();
+export const agencyReviewSchema = z.object({
+ status:z.enum(["approved","rejected","suspended"]),
+ domainLabel:z.string().trim().min(3).max(60).regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/).refine(v=>!["www","admin","api","mail","website","register"].includes(v)),
+ username:accountUsernameSchema.optional(),password:accountPasswordSchema.optional(),
+}).strict();

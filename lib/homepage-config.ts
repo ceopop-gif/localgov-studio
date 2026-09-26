@@ -119,6 +119,7 @@ export const homepageConfigSchema = z.object({
     items: z.tuple([shortText, shortText, shortText, shortText]),
   }),
   contact: z.object({
+    officeLocation: z.object({ latitude: z.string().max(30), longitude: z.string().max(30), postalCode: z.string().max(5) }).optional(),
     visible: z.boolean(),
     mapTitle: shortText,
     mapDescription: z.string().trim().min(1).max(500),
@@ -275,6 +276,7 @@ export function getDefaultHomepageConfig(
       ],
     },
     contact: {
+      officeLocation: { latitude: "", longitude: "", postalCode: "" },
       visible: true,
       mapTitle: `มา${agency}ไม่ถูก?`,
       mapDescription: "เปิดเส้นทางจากที่อยู่ของหน่วยงานได้ทันที",

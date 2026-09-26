@@ -34,7 +34,11 @@
 
 โปรเจกต์นี้เปิด schema ผ่าน `ALTER ROLE authenticator SET pgrst.db_schemas = 'public, graphql_public, localgov'` ดังนั้นค่าดังกล่าวควบคุมจากฐานข้อมูล ไม่ใช่ช่อง Exposed schemas ใน Dashboard หากเปลี่ยนวิธีจัดการต้องตรวจและรักษารายการ schema เดิมก่อน
 
-ตั้ง runtime secrets `LOCAL_ADMIN_USERNAME_SHA256` และ `LOCAL_ADMIN_PASSWORD_SHA256` เป็นค่า SHA-256 hexadecimal ตัวพิมพ์เล็กของข้อมูลล็อกอินที่เลือก ระบบปฏิเสธการเข้าสู่ระบบแบบ local หากไม่ตั้งค่า ไม่มีข้อมูลล็อกอินเริ่มต้นฝังในซอร์ส
+ใช้ `supabase/tenant-admin.sql` ตามด้วย `supabase/platform-registration.sql` และ `supabase/registration-office-details.sql` หลัง schema และ application operations บัญชีใหม่ตั้ง Username/Password ที่ `/register` เก็บรหัสผ่านด้วย bcrypt และรอการอนุมัติจาก `/admin` ก่อนล็อกอินที่ `/website` บัญชีส่วนกลางแยกจากบัญชีหน่วยงานอย่างชัดเจน การสร้างผู้ดูแลส่วนกลางต้องอนุมัติแยกและไม่มี seed credential ในซอร์ส บัญชีเดิมของสูงเนินยังใช้ runtime secrets `LOCAL_ADMIN_USERNAME_SHA256` / `LOCAL_ADMIN_PASSWORD_SHA256` และมีสิทธิ์เฉพาะสูงเนิน
+
+ตั้ง `OPENAI_API_KEY` เป็น secret ฝั่งเซิร์ฟเวอร์สำหรับ AI สร้างภาพ รุ่น `gpt-image-2.5-flare` มีเพดาน 20 คำขอต่อหน่วยงานใน 24 ชั่วโมง บันทึกภาพใน R2 และประวัติ/usage ใน Supabase ไม่เปิดคีย์ให้ browser
+
+ช่องโดเมนในส่วนกลางจองชื่อ `<name>.weblocalgov.com` และแสดงสถานะรอเชื่อม ต้องเพิ่ม hostname และ DNS/SSL ให้โฮสต์ก่อนใช้งาน (โฮสต์ไม่รองรับ wildcard) ระหว่างนั้นใช้ `/site/<slug>` ได้ เมื่อเชื่อม hostname แล้วหน้า root จะเปิดเว็บไซต์ตามชื่อที่จองไว้
 
 ไฟล์สื่อยังอยู่ใน R2 โดย metadata อยู่ใน Supabase ไม่เปลี่ยน URL ไฟล์เดิม D1 ถูกเก็บไว้เป็นต้นฉบับก่อนย้าย และแอปเวอร์ชัน Supabase ไม่เขียนข้อมูลใหม่ลง D1
 

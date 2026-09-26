@@ -1,0 +1,5 @@
+; Import into Cloudflare zone weblocalgov.com. Use DNS only (grey cloud).
+$ORIGIN weblocalgov.com.
+sung-noen 300 IN CNAME custom-domains.chatgpt.site.
+_openai-site-verification.sung-noen 300 IN TXT "openai-site-verification=XX2xzJ5X-6zV2ueg9xAxnqL0PMSzuxSXF_2sNTSgV0k"
+_cf-custom-hostname.sung-noen 300 IN TXT "f9d28d63-2c98-4f05-9e57-e27e67f758c9"

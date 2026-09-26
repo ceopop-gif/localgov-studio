@@ -1,10 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  getLocalAdminIdentity,
-  LOCAL_ADMIN_DISPLAY_NAME,
-  LOCAL_ADMIN_EMAIL,
-} from "@/lib/local-admin-auth";
+import { getLocalAdminIdentity } from "@/lib/local-admin-auth";
 
 export type ChatGPTUser = {
   id: string;
@@ -12,6 +8,8 @@ export type ChatGPTUser = {
   email: string;
   fullName: string | null;
   authSource: "chatgpt" | "local";
+  siteId?: string;
+  platform?: boolean;
 };
 
 const USER_ID_HEADER = "oai-authenticated-user-id";
@@ -24,10 +22,27 @@ const SIGN_IN_PATH = "/signin-with-chatgpt";
 const SIGN_OUT_PATH = "/signout-with-chatgpt";
 const CALLBACK_PATH = "/callback";
 
-export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
+export async function getChatGPTUser(options: { preferChatGPT?: boolean } = {}): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
   const id = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
+  if (!options.preferChatGPT || !id || !email) {
+    try {
+      const localAdmin = await getLocalAdminIdentity(requestHeaders.get("cookie"));
+      if (localAdmin) return {
+        id: localAdmin.id,
+        siteId: localAdmin.siteId,
+        platform: localAdmin.platform,
+        displayName: localAdmin.displayName,
+        email: localAdmin.email,
+        fullName: null,
+        authSource: "local",
+      };
+    } catch {
+      console.error("local admin session unavailable");
+      return null;
+    }
+  }
   if (id && email) {
     const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
     const fullName =
@@ -45,20 +60,7 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
     };
   }
 
-  try {
-    const localAdmin = await getLocalAdminIdentity(requestHeaders.get("cookie"));
-    if (!localAdmin) return null;
-    return {
-      id: localAdmin.id,
-      displayName: LOCAL_ADMIN_DISPLAY_NAME,
-      email: LOCAL_ADMIN_EMAIL,
-      fullName: null,
-      authSource: "local",
-    };
-  } catch (error) {
-    console.error("local admin session unavailable", error);
-    return null;
-  }
+  return null;
 }
 
 export async function requireChatGPTUser(
@@ -77,7 +79,7 @@ export async function requireSiteAdminUser(
   if (user) return user;
 
   const safeReturnTo = safeRelativeReturnPath(returnTo);
-  redirect(`/login?return_to=${encodeURIComponent(safeReturnTo)}`);
+  redirect(`/website?return_to=${encodeURIComponent(safeReturnTo)}`);
 }
 
 export function chatGPTSignInPath(returnTo: string): string {

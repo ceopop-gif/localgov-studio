@@ -245,8 +245,10 @@ export async function listSitesForUser(userId:string):Promise<SiteRecord[]> {
   return rows("sites", {owner_user_id:`eq.${userId}`,order:"updated_at.desc"});
 }
 export async function getManagedSite(siteId:string,userId:string):Promise<SiteRecord|null> {
+  if (userId.startsWith("site-admin:") && userId !== `site-admin:${siteId}`) return null;
   const [site] = await rows("sites", {id:`eq.${siteId}`,limit:"1"});
   if (!site) return null;
+  if (await runOperation<boolean>("is_platform_admin",{p_user_id:userId})) return site;
   if (site.ownerUserId === userId) return site;
   const [membership] = await rows("site_members", {site_id:`eq.${siteId}`,user_id:`eq.${userId}`,active:"eq.true",limit:"1"});
   return membership ? site : null;

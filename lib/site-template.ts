@@ -79,7 +79,7 @@ export function buildSiteFromTemplate(input: SiteInput, source?: SiteRecord) {
       "transparency",
       "contact",
     ] as const) {
-      homepage[key].imageUrl = original[key].imageUrl;
+      homepage[key].imageUrl = /สูงเนิน|sung.?noen/i.test(original[key].imageUrl) ? homepage[key].imageUrl : original[key].imageUrl;
       if (homepage[key].imageUrl && !homepage[key].imageAlt)
         homepage[key].imageAlt = "ภาพประกอบหน่วยงาน";
       // Image descriptions may contain the former agency's name; use new defaults.

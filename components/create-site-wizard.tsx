@@ -212,6 +212,7 @@ export function CreateSiteWizard({
         throw new Error(body.error || "สร้างเว็บไซต์ไม่สำเร็จ");
       setCreated(body.site);
       onCreated(body.site);
+      window.location.assign(`/admin/${body.site.id}`);
     } catch (caught) {
       setError(
         caught instanceof Error

@@ -2,7 +2,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { rows } from "@/db/repository";
 import { createSiteSchema } from "@/lib/validators";
 export async function GET(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getChatGPTUser({ preferChatGPT: true });
   if (!user)
     return Response.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
   if (user.authSource !== "chatgpt")

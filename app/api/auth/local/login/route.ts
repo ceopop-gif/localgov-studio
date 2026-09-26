@@ -1,10 +1,8 @@
 import {
   createLocalAdminSession,
   localAdminSessionCookie,
-  verifyLocalAdminCredentials,
 } from "@/lib/local-admin-auth";
 import { rejectCrossOriginWrite } from "@/lib/request-security";
-import { SUNG_NOEN_SITE_ID } from "@/lib/site-repository";
 import { localAdminLoginSchema } from "@/lib/validators";
 
 const NO_STORE_HEADERS = { "cache-control": "no-store" };
@@ -17,15 +15,17 @@ export async function POST(request: Request) {
     const parsed = localAdminLoginSchema.safeParse(await request.json());
     if (!parsed.success) return invalidCredentials();
 
-    const valid = await verifyLocalAdminCredentials(
-      parsed.data.username,
-      parsed.data.password,
-    );
-    if (!valid) return invalidCredentials();
-
-    const session = await createLocalAdminSession();
+    const session = await createLocalAdminSession(parsed.data.siteSlug, parsed.data.username, parsed.data.password, parsed.data.platform);
+    if (!session.ok) {
+      if (session.blocked) return Response.json(
+        { error: "เข้าสู่ระบบผิดหลายครั้ง กรุณารอ 5 นาทีแล้วลองใหม่" },
+        { status: 429, headers: { ...NO_STORE_HEADERS, "retry-after": "300" } },
+      );
+      if (session.pending) return Response.json({error:"ลงทะเบียนแล้ว กำลังรอผู้ดูแลระบบอนุมัติ", pending:true}, {status:403,headers:NO_STORE_HEADERS});
+      return invalidCredentials();
+    }
     const response = Response.json(
-      { ok: true, redirectTo: `/admin/${SUNG_NOEN_SITE_ID}` },
+      { ok: true, redirectTo: session.platform ? "/admin" : `/admin/${session.siteId}` },
       { headers: NO_STORE_HEADERS },
     );
     response.headers.append("set-cookie", localAdminSessionCookie(session.token));
