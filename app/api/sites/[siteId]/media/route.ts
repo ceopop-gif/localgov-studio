@@ -1,7 +1,5 @@
-import { desc, eq } from "drizzle-orm";
+import { rows, createRecord } from "@/db/repository";
 import { env } from "cloudflare:workers";
-import { getDb } from "@/db";
-import { auditLogs, mediaFiles } from "@/db/schema";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getManagedSite } from "@/lib/site-repository";
 import { rejectCrossOriginWrite } from "@/lib/request-security";
@@ -38,12 +36,8 @@ export async function GET(
   if (!(await getManagedSite(siteId, user.id))) {
     return Response.json({ error: "ไม่มีสิทธิ์จัดการเว็บไซต์นี้" }, { status: 403 });
   }
-  const db = getDb();
-  const files = await db
-    .select()
-    .from(mediaFiles)
-    .where(eq(mediaFiles.siteId, siteId))
-    .orderBy(desc(mediaFiles.createdAt));
+
+  const files = await rows("media_files", {site_id:`eq.${siteId}`,order:"created_at.desc"});
   return Response.json({ files });
 }
 
@@ -75,9 +69,8 @@ export async function POST(
 
   try {
     await bucket.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type } });
-    const db = getDb();
-    await db.batch([
-      db.insert(mediaFiles).values({
+
+    await createRecord("media_files", {
         id,
         siteId,
         objectKey: key,
@@ -87,8 +80,7 @@ export async function POST(
         category,
         altText,
         uploadedBy: user.email,
-      }),
-      db.insert(auditLogs).values({
+      }, {
         id: crypto.randomUUID(),
         siteId,
         actorUserId: user.id,
@@ -97,8 +89,7 @@ export async function POST(
         entityType: "media",
         entityId: id,
         metadata: JSON.stringify({ fileName: file.name, sizeBytes: file.size }),
-      }),
-    ]);
+      });
     return Response.json({ file: { id, fileName: file.name, url: `/api/media/${id}` } }, { status: 201 });
   } catch (error) {
     console.error("media upload failed", error);

@@ -1,6 +1,4 @@
-import { desc, eq } from "drizzle-orm";
-import { getDb } from "@/db";
-import { serviceRequests } from "@/db/schema";
+import { rows } from "@/db/repository";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getManagedSite } from "@/lib/site-repository";
 
@@ -14,12 +12,6 @@ export async function GET(
   if (!(await getManagedSite(siteId, user.id))) {
     return Response.json({ error: "ไม่มีสิทธิ์จัดการเว็บไซต์นี้" }, { status: 403 });
   }
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(serviceRequests)
-    .where(eq(serviceRequests.siteId, siteId))
-    .orderBy(desc(serviceRequests.createdAt))
-    .limit(100);
-  return Response.json({ requests: rows });
+  const result = await rows("service_requests", {site_id:`eq.${siteId}`,order:"created_at.desc",limit:"100"});
+  return Response.json({ requests: result });
 }

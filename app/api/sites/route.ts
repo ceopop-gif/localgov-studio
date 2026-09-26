@@ -1,6 +1,4 @@
-import { desc, eq } from "drizzle-orm";
-import { getDb } from "@/db";
-import { auditLogs, siteMembers, sites } from "@/db/schema";
+import { rows, createRecord } from "@/db/repository";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { createSiteSchema } from "@/lib/validators";
 import { rejectCrossOriginWrite } from "@/lib/request-security";
@@ -20,13 +18,9 @@ export async function GET() {
   }
 
   try {
-    const db = getDb();
-    const rows = await db
-      .select()
-      .from(sites)
-      .where(eq(sites.ownerUserId, user.id))
-      .orderBy(desc(sites.updatedAt));
-    return Response.json({ sites: rows });
+
+    const result = await rows("sites", {owner_user_id:`eq.${user.id}`,order:"updated_at.desc"});
+    return Response.json({ sites: result });
   } catch (error) {
     console.error("list sites failed", error);
     return Response.json({ error: "ไม่สามารถโหลดเว็บไซต์ได้ในขณะนี้" }, { status: 500 });
@@ -54,7 +48,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = getDb();
     const siteId = crypto.randomUUID();
     const memberId = crypto.randomUUID();
     const logId = crypto.randomUUID();
@@ -66,8 +59,7 @@ export async function POST(request: Request) {
       (value.subdistrict ? 7 : 0) +
       (value.englishName ? 4 : 0);
 
-    await db.batch([
-      db.insert(sites).values({
+    await createRecord("sites", {
         id: siteId,
         ownerUserId: user.id,
         name: value.name,
@@ -80,16 +72,7 @@ export async function POST(request: Request) {
         primaryColor: value.primaryColor,
         secondaryColor: value.secondaryColor,
         completeness,
-      }),
-      db.insert(siteMembers).values({
-        id: memberId,
-        siteId,
-        userId: user.id,
-        email: user.email,
-        role: "super_admin",
-        department: "ผู้ดูแลระบบกลาง",
-      }),
-      db.insert(auditLogs).values({
+      }, {
         id: logId,
         siteId,
         actorUserId: user.id,
@@ -98,10 +81,16 @@ export async function POST(request: Request) {
         entityType: "site",
         entityId: siteId,
         metadata: JSON.stringify({ slug: value.slug, template: "local-government-v1" }),
-      }),
-    ]);
+      }, {
+        id: memberId,
+        siteId,
+        userId: user.id,
+        email: user.email,
+        role: "super_admin",
+        department: "ผู้ดูแลระบบกลาง",
+      });
 
-    const [created] = await db.select().from(sites).where(eq(sites.id, siteId)).limit(1);
+    const [created] = await rows("sites", {id:`eq.${siteId}`,limit:"1"});
     return Response.json({ site: created }, { status: 201 });
   } catch (error) {
     console.error("create site failed", error);

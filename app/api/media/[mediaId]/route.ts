@@ -1,7 +1,5 @@
-import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
-import { getDb } from "@/db";
-import { mediaFiles } from "@/db/schema";
+import { rows } from "@/db/repository";
 
 type StoredObject = {
   body: ReadableStream;
@@ -18,8 +16,7 @@ export async function GET(
 ) {
   const { mediaId } = await params;
   try {
-    const db = getDb();
-    const [file] = await db.select().from(mediaFiles).where(eq(mediaFiles.id, mediaId)).limit(1);
+    const [file] = await rows("media_files", {id:`eq.${mediaId}`,limit:"1"});
     if (!file) return new Response("Not found", { status: 404 });
     const bucket = (env as unknown as { BUCKET?: Bucket }).BUCKET;
     if (!bucket) throw new Error("R2 binding BUCKET is unavailable");

@@ -1,6 +1,4 @@
-import { and, eq } from "drizzle-orm";
-import { getDb } from "@/db";
-import { auditLogs, contentItems } from "@/db/schema";
+import { rows, updateRecord } from "@/db/repository";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getManagedSite } from "@/lib/site-repository";
 import { updateContentSchema } from "@/lib/validators";
@@ -25,7 +23,7 @@ export async function PATCH(
   }
 
   try {
-    const db = getDb();
+
     const now = new Date().toISOString();
     const { galleryUrls, ...contentUpdates } = parsed.data;
     const updates = {
@@ -36,17 +34,7 @@ export async function PATCH(
         ? { publishedAt: now, approvedBy: user.email }
         : {}),
     };
-    await db.batch([
-      db
-        .update(contentItems)
-        .set(updates)
-        .where(
-          and(
-            eq(contentItems.id, contentId),
-            eq(contentItems.siteId, siteId),
-          ),
-        ),
-      db.insert(auditLogs).values({
+    await updateRecord("content_items", contentId, siteId, updates, {
         id: crypto.randomUUID(),
         siteId,
         actorUserId: user.id,
@@ -55,18 +43,8 @@ export async function PATCH(
         entityType: "content",
         entityId: contentId,
         metadata: JSON.stringify({ fields: Object.keys(parsed.data) }),
-      }),
-    ]);
-    const [updated] = await db
-      .select()
-      .from(contentItems)
-      .where(
-        and(
-          eq(contentItems.id, contentId),
-          eq(contentItems.siteId, siteId),
-        ),
-      )
-      .limit(1);
+      });
+    const [updated] = await rows("content_items", {id:`eq.${contentId}`,site_id:`eq.${siteId}`,limit:"1"});
     return Response.json({ content: updated });
   } catch (error) {
     console.error("update content failed", error);

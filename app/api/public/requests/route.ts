@@ -1,6 +1,4 @@
-import { and, eq } from "drizzle-orm";
-import { getDb } from "@/db";
-import { auditLogs, serviceRequests, sites } from "@/db/schema";
+import { rows, createRecord } from "@/db/repository";
 import { DEMO_SITE } from "@/lib/models";
 import { createRequestSchema } from "@/lib/validators";
 import { rejectCrossOriginWrite } from "@/lib/request-security";
@@ -30,25 +28,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = getDb();
-    const [site] = await db
-      .select({ id: sites.id })
-      .from(sites)
-      .where(eq(sites.slug, parsed.data.siteSlug))
-      .limit(1);
+    const [site] = await rows("sites", {slug:`eq.${parsed.data.siteSlug}`,limit:"1"});
     if (!site) return Response.json({ error: "ไม่พบหน่วยงานที่ต้องการส่งเรื่อง" }, { status: 404 });
 
     const id = crypto.randomUUID();
     const code = trackingCode();
-    const { siteSlug: _siteSlug, ...payload } = parsed.data;
-    await db.batch([
-      db.insert(serviceRequests).values({
+    const payload = { ...parsed.data };
+    Reflect.deleteProperty(payload, "siteSlug");
+    await createRecord("service_requests", {
         id,
         siteId: site.id,
         trackingCode: code,
         ...payload,
-      }),
-      db.insert(auditLogs).values({
+      }, {
         id: crypto.randomUUID(),
         siteId: site.id,
         actorUserId: "public",
@@ -57,8 +49,7 @@ export async function POST(request: Request) {
         entityType: "service_request",
         entityId: id,
         metadata: JSON.stringify({ requestType: payload.requestType }),
-      }),
-    ]);
+      });
     return Response.json({ trackingCode: code }, { status: 201 });
   } catch (error) {
     console.error("public service request failed", error);
@@ -87,20 +78,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const db = getDb();
-    const [row] = await db
-      .select({
-        trackingCode: serviceRequests.trackingCode,
-        requestType: serviceRequests.requestType,
-        status: serviceRequests.status,
-        assignedDepartment: serviceRequests.assignedDepartment,
-        createdAt: serviceRequests.createdAt,
-        updatedAt: serviceRequests.updatedAt,
-      })
-      .from(serviceRequests)
-      .innerJoin(sites, eq(serviceRequests.siteId, sites.id))
-      .where(and(eq(sites.slug, slug), eq(serviceRequests.trackingCode, code)))
-      .limit(1);
+
+    const [site] = await rows("sites", {slug:`eq.${slug}`,select:"id",limit:"1"});
+    const [row] = site ? await rows("service_requests", {site_id:`eq.${site.id}`,tracking_code:`eq.${code}`,select:"tracking_code,request_type,status,assigned_department,created_at,updated_at",limit:"1"}) : [];
     if (!row) return Response.json({ error: "ไม่พบเลขรับเรื่องนี้" }, { status: 404 });
     return Response.json({ request: row });
   } catch (error) {

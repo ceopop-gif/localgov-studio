@@ -1,6 +1,4 @@
-import { and, eq } from "drizzle-orm";
-import { getDb } from "@/db";
-import { auditLogs, serviceRequests } from "@/db/schema";
+import { rows, updateRecord } from "@/db/repository";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getManagedSite } from "@/lib/site-repository";
 import { updateRequestSchema } from "@/lib/validators";
@@ -23,18 +21,8 @@ export async function PATCH(
   if (!parsed.success) return Response.json({ error: "สถานะหรือหน่วยงานไม่ถูกต้อง" }, { status: 400 });
 
   try {
-    const db = getDb();
-    await db.batch([
-      db
-        .update(serviceRequests)
-        .set({ ...parsed.data, updatedAt: new Date().toISOString() })
-        .where(
-          and(
-            eq(serviceRequests.id, requestId),
-            eq(serviceRequests.siteId, siteId),
-          ),
-        ),
-      db.insert(auditLogs).values({
+
+    await updateRecord("service_requests", requestId, siteId, { ...parsed.data, updatedAt: new Date().toISOString() }, {
         id: crypto.randomUUID(),
         siteId,
         actorUserId: user.id,
@@ -43,13 +31,8 @@ export async function PATCH(
         entityType: "service_request",
         entityId: requestId,
         metadata: JSON.stringify(parsed.data),
-      }),
-    ]);
-    const [updated] = await db
-      .select()
-      .from(serviceRequests)
-      .where(eq(serviceRequests.id, requestId))
-      .limit(1);
+      });
+    const [updated] = await rows("service_requests", {id:`eq.${requestId}`,site_id:`eq.${siteId}`,limit:"1"});
     return Response.json({ request: updated });
   } catch (error) {
     console.error("update service request failed", error);

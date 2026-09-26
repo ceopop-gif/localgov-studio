@@ -1,6 +1,6 @@
 # LocalGov Studio
 
-ระบบเว็บไซต์สำเร็จรูปแบบหลายหน่วยงานสำหรับ อบต. เทศบาล และองค์กรปกครองส่วนท้องถิ่น
+ระบบเว็บไซต์สำเร็จรูปสำหรับ อบต. เทศบาล และองค์กรปกครองส่วนท้องถิ่น
 
 ## ส่วนประกอบหลัก
 
@@ -9,21 +9,28 @@
 - ข่าว ประกาศ ITA/OIT จัดซื้อจัดจ้าง และคลังไฟล์
 - ระบบคำร้องประชาชนพร้อมเลขรับเรื่องและติดตามสถานะ
 - หน้าบ้าน Mobile First พร้อมเครื่องมือช่วยการเข้าถึง
-- D1 สำหรับข้อมูลเชิงโครงสร้าง และ R2 สำหรับเอกสาร/สื่อ
-- ประวัติการทำงาน สิทธิ์ตามบทบาท SEO และข้อควรระวังด้าน PDPA
+- Supabase PostgreSQL สำหรับข้อมูล และ R2 สำหรับเอกสาร/สื่อ
+- ประวัติการทำงาน การตรวจสิทธิ์ SEO และข้อควรระวังด้าน PDPA
 
-## คำสั่งโครงการ
+## การตั้งค่าเซิร์ฟเวอร์
 
-- `npm run build` สร้างไฟล์สำหรับเผยแพร่
-- `npm run db:generate` สร้าง migration เมื่อแก้ schema
-- `npx tsc --noEmit` ตรวจชนิดข้อมูล
+ตั้งค่า `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` และ **server secret** `SUPABASE_SECRET_KEY` ใน runtime ของเว็บไซต์ คีย์ลับต้องไม่อยู่ใน Git หรือส่งให้เบราว์เซอร์
 
-ข้อมูลราชการที่มีโอกาสเปลี่ยนต้องตรวจสอบจากแหล่งทางการก่อนเผยแพร่เสมอ
+ใช้ `supabase/schema.sql` และ `supabase/application-operations.sql` สำหรับโครงสร้างและคำสั่งบันทึกข้อมูลแบบ transaction โดยเปิด schema `localgov` ผ่าน Data API และให้สิทธิ์เฉพาะ `service_role` ทุกตารางเปิด RLS และปิดสิทธิ์ `anon`/`authenticated` แอปตรวจสิทธิ์ผู้ดูแลจากเซสชันเดิมก่อนใช้ฐานข้อมูล
 
-## สำเนาสำหรับ GitHub
+โปรเจกต์นี้เปิด schema ผ่าน `ALTER ROLE authenticator SET pgrst.db_schemas = 'public, graphql_public, localgov'` ดังนั้นค่าดังกล่าวควบคุมจากฐานข้อมูล ไม่ใช่ช่อง Exposed schemas ใน Dashboard หากเปลี่ยนวิธีจัดการต้องตรวจและรักษารายการ schema เดิมก่อน
 
-นำเข้าซอร์ส LocalGov Studio จาก commit `aa2d88932f7b06616c13314be47bce8639db9129` พร้อมคู่มือใน `docs/local-government-website-skill-th.md`
+ตั้ง runtime secrets `LOCAL_ADMIN_USERNAME_SHA256` และ `LOCAL_ADMIN_PASSWORD_SHA256` เป็นค่า SHA-256 hexadecimal ตัวพิมพ์เล็กของข้อมูลล็อกอินที่เลือก ระบบปฏิเสธการเข้าสู่ระบบแบบ local หากไม่ตั้งค่า ไม่มีข้อมูลล็อกอินเริ่มต้นฝังในซอร์ส
 
-สำเนานี้นำค่าล็อกอินที่ฝังในซอร์สออกแล้ว ก่อนเปิดใช้การเข้าสู่ระบบหลังบ้านแบบ local ให้กำหนด runtime secrets `LOCAL_ADMIN_USERNAME_SHA256` และ `LOCAL_ADMIN_PASSWORD_SHA256` เป็นค่า SHA-256 แบบ hexadecimal ตัวพิมพ์เล็กของชื่อผู้ใช้และรหัสผ่านที่เลือก หากไม่ตั้งค่าหรือรูปแบบไม่ถูกต้อง ระบบจะปฏิเสธการเข้าสู่ระบบแบบ local เก็บทั้งรหัสผ่านและค่า digest ไว้นอก Git
+ไฟล์สื่อยังอยู่ใน R2 โดย metadata อยู่ใน Supabase ไม่เปลี่ยน URL ไฟล์เดิม D1 ถูกเก็บไว้เป็นต้นฉบับก่อนย้าย และแอปเวอร์ชัน Supabase ไม่เขียนข้อมูลใหม่ลง D1
 
-ไฟล์ใน repository เป็นซอร์สโค้ดและ migrations ไม่รวมข้อมูลฐานข้อมูลจริง ไฟล์ที่ผู้ใช้อัปโหลดใน R2 หรือ runtime secrets การอัปโหลดสำเนานี้ไม่ได้เปลี่ยนเว็บไซต์ที่เผยแพร่อยู่
+## ตรวจสอบและสร้าง
+
+- `npx tsc --noEmit --incremental false`
+- `node --test tests/supabase-rest.test.mjs`
+- `npm run build`
+- `tests/supabase-operations.sql` ทดสอบ transaction, สิทธิ์ข้ามหน่วยงาน, คำร้อง, สื่อ และเซสชัน โดย rollback ข้อมูลทดสอบทั้งหมด
+
+ดูสถานะการย้ายและข้อจำกัดใน `supabase/CONNECTION_STATUS.md` และคู่มือหน่วยงานใน `docs/local-government-website-skill-th.md`
+
+Repository มีเฉพาะซอร์สและโครงสร้างฐานข้อมูล ไม่รวมข้อมูลประชาชน ไฟล์อัปโหลด หรือ runtime secrets การอัปเดต GitHub ไม่ได้เผยแพร่เว็บไซต์อัตโนมัติ

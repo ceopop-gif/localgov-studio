@@ -1,6 +1,4 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "@/db";
-import { auditLogs, sites } from "@/db/schema";
+import { rows, updateRecord } from "@/db/repository";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getManagedSite } from "@/lib/site-repository";
 import { updateSiteSchema } from "@/lib/validators";
@@ -25,7 +23,6 @@ export async function PATCH(
       return Response.json({ error: "ไม่มีข้อมูลที่แก้ไขได้" }, { status: 400 });
     }
 
-    const db = getDb();
     const { services, homepage, ...siteFields } = parsed.data;
     const changes = {
       ...siteFields,
@@ -33,9 +30,7 @@ export async function PATCH(
       ...(homepage ? { homepageJson: JSON.stringify(homepage) } : {}),
       updatedAt: new Date().toISOString(),
     };
-    await db.batch([
-      db.update(sites).set(changes).where(eq(sites.id, siteId)),
-      db.insert(auditLogs).values({
+    await updateRecord("sites", siteId, siteId, changes, {
         id: crypto.randomUUID(),
         siteId,
         actorUserId: user.id,
@@ -44,10 +39,9 @@ export async function PATCH(
         entityType: "site",
         entityId: siteId,
         metadata: JSON.stringify({ fields: Object.keys(parsed.data) }),
-      }),
-    ]);
+      });
 
-    const [updated] = await db.select().from(sites).where(eq(sites.id, siteId)).limit(1);
+    const [updated] = await rows("sites", {id:`eq.${siteId}`,limit:"1"});
     return Response.json({ site: updated });
   } catch (error) {
     console.error("update site failed", error);

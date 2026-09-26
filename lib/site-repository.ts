@@ -1,12 +1,5 @@
-import { and, count, desc, eq, ne } from "drizzle-orm";
-import { getDb } from "@/db";
-import {
-  auditLogs,
-  contentItems,
-  serviceRequests,
-  siteMembers,
-  sites,
-} from "@/db/schema";
+import { supabaseRest } from "@/db/supabase-rest";
+import { rows, createRecord, runOperation, toDatabase } from "@/db/repository";
 import type {
   ContentRecord,
   DashboardStats,
@@ -182,21 +175,17 @@ const SUNG_NOEN_EXAMPLE_ARTICLES = [
 ] as const;
 
 async function ensureSungNoenExampleArticles() {
-  const db = getDb();
-  await db.insert(contentItems).values([...SUNG_NOEN_EXAMPLE_ARTICLES]).onConflictDoNothing();
+
+  await supabaseRest.insert("content_items", SUNG_NOEN_EXAMPLE_ARTICLES.map(article=>toDatabase({...article})), true);
 }
 
 export async function ensureSungNoenSiteForUser(
   userId: string,
   userEmail: string,
 ): Promise<SiteRecord> {
-  const db = getDb();
+
   const findExisting = async () => {
-    const [site] = await db
-      .select()
-      .from(sites)
-      .where(eq(sites.slug, SUNG_NOEN_SITE_SLUG))
-      .limit(1);
+    const [site] = await rows("sites", {slug:`eq.${SUNG_NOEN_SITE_SLUG}`,limit:"1"});
     return site ?? null;
   };
 
@@ -209,23 +198,13 @@ export async function ensureSungNoenSiteForUser(
   }
 
   try {
-    await db.batch([
-      db.insert(sites).values({
+    await createRecord("sites", {
         id: SUNG_NOEN_SITE_ID,
         ownerUserId: userId,
         slug: SUNG_NOEN_SITE_SLUG,
         status: "draft",
         ...SUNG_NOEN_OFFICIAL_DATA,
-      }),
-      db.insert(siteMembers).values({
-        id: crypto.randomUUID(),
-        siteId: SUNG_NOEN_SITE_ID,
-        userId,
-        email: userEmail,
-        role: "super_admin",
-        department: "ผู้ดูแลระบบกลาง",
-      }),
-      db.insert(auditLogs).values({
+      }, {
         id: crypto.randomUUID(),
         siteId: SUNG_NOEN_SITE_ID,
         actorUserId: userId,
@@ -243,8 +222,14 @@ export async function ensureSungNoenSiteForUser(
             "https://sungnoen.go.th/page39-2/",
           ],
         }),
-      }),
-    ]);
+      }, {
+        id: crypto.randomUUID(),
+        siteId: SUNG_NOEN_SITE_ID,
+        userId,
+        email: userEmail,
+        role: "super_admin",
+        department: "ผู้ดูแลระบบกลาง",
+      });
   } catch (error) {
     const racedSite = await findExisting();
     if (racedSite?.ownerUserId === userId) return racedSite;
@@ -256,127 +241,33 @@ export async function ensureSungNoenSiteForUser(
   return created;
 }
 
-export async function listSitesForUser(userId: string): Promise<SiteRecord[]> {
-  const db = getDb();
-  return db
-    .select()
-    .from(sites)
-    .where(eq(sites.ownerUserId, userId))
-    .orderBy(desc(sites.updatedAt));
+export async function listSitesForUser(userId:string):Promise<SiteRecord[]> {
+  return rows("sites", {owner_user_id:`eq.${userId}`,order:"updated_at.desc"});
 }
-
-export async function getManagedSite(
-  siteId: string,
-  userId: string,
-): Promise<SiteRecord | null> {
-  const db = getDb();
-  const [owned] = await db
-    .select()
-    .from(sites)
-    .where(and(eq(sites.id, siteId), eq(sites.ownerUserId, userId)))
-    .limit(1);
-  if (owned) return owned;
-
-  const [membership] = await db
-    .select({ site: sites })
-    .from(siteMembers)
-    .innerJoin(sites, eq(siteMembers.siteId, sites.id))
-    .where(
-      and(
-        eq(siteMembers.siteId, siteId),
-        eq(siteMembers.userId, userId),
-        eq(siteMembers.active, true),
-      ),
-    )
-    .limit(1);
-  return membership?.site ?? null;
+export async function getManagedSite(siteId:string,userId:string):Promise<SiteRecord|null> {
+  const [site] = await rows("sites", {id:`eq.${siteId}`,limit:"1"});
+  if (!site) return null;
+  if (site.ownerUserId === userId) return site;
+  const [membership] = await rows("site_members", {site_id:`eq.${siteId}`,user_id:`eq.${userId}`,active:"eq.true",limit:"1"});
+  return membership ? site : null;
 }
-
-export async function getPublicSiteBySlug(slug: string): Promise<SiteRecord | null> {
-  const db = getDb();
-  const [site] = await db.select().from(sites).where(eq(sites.slug, slug)).limit(1);
-  return site ?? null;
+export async function getPublicSiteBySlug(slug:string):Promise<SiteRecord|null> {
+  return (await rows("sites", {slug:`eq.${slug}`,limit:"1"}))[0] ?? null;
 }
-
-export async function listPublishedSites(): Promise<SiteRecord[]> {
-  const db = getDb();
-  return db
-    .select()
-    .from(sites)
-    .where(eq(sites.status, "published"))
-    .orderBy(desc(sites.updatedAt));
+export async function listPublishedSites():Promise<SiteRecord[]> {
+  return rows("sites", {status:"eq.published",order:"updated_at.desc"});
 }
-
-export async function listContentForSite(siteId: string): Promise<ContentRecord[]> {
+export async function listContentForSite(siteId:string):Promise<ContentRecord[]> {
   if (siteId === SUNG_NOEN_SITE_ID) await ensureSungNoenExampleArticles();
-  const db = getDb();
-  return db
-    .select()
-    .from(contentItems)
-    .where(eq(contentItems.siteId, siteId))
-    .orderBy(desc(contentItems.updatedAt))
-    .limit(80);
+  return rows("content_items", {site_id:`eq.${siteId}`,order:"updated_at.desc",limit:"80"});
 }
-
-export async function listPublishedContent(
-  siteId: string,
-): Promise<ContentRecord[]> {
+export async function listPublishedContent(siteId:string):Promise<ContentRecord[]> {
   if (siteId === SUNG_NOEN_SITE_ID) await ensureSungNoenExampleArticles();
-  const db = getDb();
-  return db
-    .select()
-    .from(contentItems)
-    .where(
-      and(eq(contentItems.siteId, siteId), eq(contentItems.status, "published")),
-    )
-    .orderBy(desc(contentItems.publishedAt), desc(contentItems.updatedAt))
-    .limit(30);
+  return rows("content_items", {site_id:`eq.${siteId}`,status:"eq.published",order:"published_at.desc.nullslast,updated_at.desc",limit:"30"});
 }
-
-export async function listRequestsForSite(
-  siteId: string,
-): Promise<ServiceRequestRecord[]> {
-  const db = getDb();
-  return db
-    .select()
-    .from(serviceRequests)
-    .where(eq(serviceRequests.siteId, siteId))
-    .orderBy(desc(serviceRequests.createdAt))
-    .limit(80);
+export async function listRequestsForSite(siteId:string):Promise<ServiceRequestRecord[]> {
+  return rows("service_requests", {site_id:`eq.${siteId}`,order:"created_at.desc",limit:"80"});
 }
-
-export async function getDashboardStats(siteId: string): Promise<DashboardStats> {
-  const db = getDb();
-  const [contentCount, draftCount, openCount, completedCount] = await Promise.all([
-    db.select({ value: count() }).from(contentItems).where(eq(contentItems.siteId, siteId)),
-    db
-      .select({ value: count() })
-      .from(contentItems)
-      .where(and(eq(contentItems.siteId, siteId), eq(contentItems.status, "draft"))),
-    db
-      .select({ value: count() })
-      .from(serviceRequests)
-      .where(
-        and(
-          eq(serviceRequests.siteId, siteId),
-          ne(serviceRequests.status, "completed"),
-        ),
-      ),
-    db
-      .select({ value: count() })
-      .from(serviceRequests)
-      .where(
-        and(
-          eq(serviceRequests.siteId, siteId),
-          eq(serviceRequests.status, "completed"),
-        ),
-      ),
-  ]);
-
-  return {
-    content: contentCount[0]?.value ?? 0,
-    drafts: draftCount[0]?.value ?? 0,
-    openRequests: openCount[0]?.value ?? 0,
-    completedRequests: completedCount[0]?.value ?? 0,
-  };
+export async function getDashboardStats(siteId:string):Promise<DashboardStats> {
+  return runOperation<DashboardStats>("dashboard_stats", {p_site_id:siteId});
 }
