@@ -1,5 +1,6 @@
 import { supabaseRest } from "@/db/supabase-rest";
 import { rows, createRecord, runOperation, toDatabase } from "@/db/repository";
+import { MASTER_TEMPLATE_NAME, MASTER_TEMPLATE_SITE_ID } from "@/lib/template-identity";
 import type {
   ContentRecord,
   DashboardStats,
@@ -7,11 +8,11 @@ import type {
   SiteRecord,
 } from "@/lib/models";
 
-export const SUNG_NOEN_SITE_ID = "sung-noen-municipality";
+export const SUNG_NOEN_SITE_ID = MASTER_TEMPLATE_SITE_ID;
 export const SUNG_NOEN_SITE_SLUG = "sung-noen";
 
 const SUNG_NOEN_OFFICIAL_DATA = {
-  name: "เทศบาลตำบลสูงเนิน",
+  name: MASTER_TEMPLATE_NAME,
   englishName: "Sung Noen Subdistrict Municipality",
   organizationType: "เทศบาลตำบล",
   province: "นครราชสีมา",
