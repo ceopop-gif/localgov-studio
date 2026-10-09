@@ -11,6 +11,7 @@ import {
   getPublicSiteBySlug,
   getManagedSite,
   listPublishedContent,
+  listPublishedServiceForms,
   SUNG_NOEN_SITE_SLUG,
 } from "@/lib/site-repository";
 
@@ -72,7 +73,8 @@ export default async function PublicSitePage({
   let content: ContentRecord[] = site.isDemo ? DEMO_CONTENT : [];
   if (!site.isDemo) {
     try {
-      content = await listPublishedContent(site.id);
+      const [latest, forms] = await Promise.all([listPublishedContent(site.id), listPublishedServiceForms(site.id)]);
+      content = [...latest.filter(item=>item.type!=="service"), ...forms];
     } catch (error) {
       console.error("public content unavailable", error);
     }
@@ -114,3 +116,4 @@ export default async function PublicSitePage({
     </>
   );
 }
+

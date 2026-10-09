@@ -272,9 +272,18 @@ export async function listPublishedContent(siteId:string):Promise<ContentRecord[
   if (siteId === SUNG_NOEN_SITE_ID) await ensureSungNoenExampleArticles();
   return rows("content_items", {site_id:`eq.${siteId}`,status:"eq.published",order:"published_at.desc.nullslast,updated_at.desc",limit:"30"});
 }
+export async function listPublishedServiceForms(siteId:string):Promise<ContentRecord[]> {
+  const result:ContentRecord[] = [];
+  for(let offset=0;;offset+=200){
+    const page = await rows("content_items", {site_id:`eq.${siteId}`,type:"eq.service",status:"eq.published",order:"updated_at.desc,id.asc",offset:String(offset),limit:"200"});
+    result.push(...page);
+    if(page.length<200)return result;
+  }
+}
 export async function listRequestsForSite(siteId:string):Promise<ServiceRequestRecord[]> {
   return rows("service_requests", {site_id:`eq.${siteId}`,order:"created_at.desc",limit:"80"});
 }
 export async function getDashboardStats(siteId:string):Promise<DashboardStats> {
   return runOperation<DashboardStats>("dashboard_stats", {p_site_id:siteId});
 }
+

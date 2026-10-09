@@ -72,6 +72,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { getContentImages, getYouTubeEmbedUrl } from "@/lib/content-media";
+import { getServiceForms, getFormDownloadUrl } from "@/lib/service-forms";
 import { getHomepageConfig } from "@/lib/homepage-config";
 import type { ContentRecord, SiteRecord } from "@/lib/models";
 
@@ -100,7 +101,7 @@ const statusText: Record<string, string> = {
 const publicDialogFieldClass = "border-slate-300 bg-white text-base text-slate-950 placeholder:text-slate-500 focus-visible:border-[#0b5260] focus-visible:ring-[#0b5260]/20 md:text-base";
 const publicDialogLabelClass = "text-base font-semibold leading-6 text-slate-900";
 
-function RequestDialog({ site, services, initialType, open, onOpenChange }: { site: SiteRecord; services: CitizenService[]; initialType: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+function RequestDialog({ site, services, initialType, open, onOpenChange, onOpenForms }: { site: SiteRecord; services: CitizenService[]; initialType: string; open: boolean; onOpenChange: (open: boolean) => void; onOpenForms: () => void }) {
   const [selectedRequestType, setSelectedRequestType] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -212,6 +213,7 @@ function RequestDialog({ site, services, initialType, open, onOpenChange }: { si
               <DialogTitle className="text-xl leading-8 text-slate-950">ส่งคำร้องออนไลน์</DialogTitle>
               <DialogDescription className="text-base leading-7 text-slate-600">ระบบจะออกเลขรับเรื่องทันที และใช้ติดตามสถานะได้ตลอดกระบวนการ</DialogDescription>
             </DialogHeader>
+            <div className="px-6 pt-4"><Button type="button" variant="outline" onClick={onOpenForms}><Download className="size-4"/>ดาวน์โหลดแบบฟอร์มคำร้อง</Button></div>
             <form onSubmit={submit} className="space-y-5 bg-white px-6 py-5 text-slate-950">
               <div className="space-y-2">
                 <Label htmlFor="request-type" className={publicDialogLabelClass}>ประเภทเรื่อง *</Label>
@@ -424,6 +426,10 @@ export function PublicSiteHome({ site, content }: { site: SiteRecord; content: C
   const [query, setQuery] = useState("");
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestType, setRequestType] = useState("แจ้งเรื่องร้องเรียน");
+  const [formsOpen, setFormsOpen] = useState(false);
+  const [formQuery, setFormQuery] = useState("");
+  const forms = getServiceForms(content);
+  const visibleForms = forms.filter(item => `${item.title} ${item.category}`.toLowerCase().includes(formQuery.trim().toLowerCase()));
   const [trackOpen, setTrackOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
   const [highContrast, setHighContrast] = useState(false);
@@ -481,7 +487,7 @@ export function PublicSiteHome({ site, content }: { site: SiteRecord; content: C
   const quickActions = [
     { ...homepage.quickActions[0], icon: Send, tone: "#e5573f", action: () => openRequest("แจ้งเรื่องร้องเรียน") },
     { ...homepage.quickActions[1], icon: Clock3, tone: "#167e72", action: () => setTrackOpen(true) },
-    { ...homepage.quickActions[2], icon: Download, tone: "#2d6ea3", action: () => document.getElementById("ข่าวสาร")?.scrollIntoView({ behavior: "smooth" }) },
+    { ...homepage.quickActions[2], icon: Download, tone: "#2d6ea3", action: () => setFormsOpen(true) },
     { ...homepage.quickActions[3], icon: Phone, tone: "#7957a8", href: phoneHref },
   ];
 
@@ -674,8 +680,10 @@ export function PublicSiteHome({ site, content }: { site: SiteRecord; content: C
 
       <div className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t border-slate-200 bg-white/96 p-2 shadow-[0_-8px_30px_rgba(15,23,42,.12)] backdrop-blur lg:hidden"><Button variant="outline" className="h-12 rounded-r-none font-bold" onClick={() => setTrackOpen(true)}><Search /> {homepage.hero.secondaryButton}</Button><Button className="h-12 rounded-l-none font-bold text-white" style={{ background: site.primaryColor }} onClick={() => openRequest("แจ้งเรื่องร้องเรียน")}><Send /> {homepage.hero.primaryButton}</Button></div>
 
-      <RequestDialog site={site} services={availableServices} initialType={requestType} open={requestOpen} onOpenChange={setRequestOpen} />
+      <Dialog open={formsOpen} onOpenChange={setFormsOpen}><DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>แบบฟอร์มคำร้องประชาชน</DialogTitle><DialogDescription>เลือกเปิดหรือดาวน์โหลดแบบฟอร์มที่หน่วยงานเผยแพร่</DialogDescription></DialogHeader><Label htmlFor="public-form-search">ค้นหาแบบฟอร์ม</Label><Input id="public-form-search" value={formQuery} onChange={event=>setFormQuery(event.target.value)} placeholder="ชื่อแบบฟอร์มหรือหมวดบริการ"/><div className="space-y-3">{visibleForms.map(item=><article key={item.id} className="rounded-xl border border-slate-200 p-4"><h3 className="font-semibold">{item.title}</h3><p className="mt-1 text-sm text-slate-500">{item.category} · {item.attachmentName}</p><div className="mt-3 flex flex-wrap gap-2"><Button asChild variant="outline"><a href={item.attachmentUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4"/>เปิดไฟล์</a></Button><Button asChild><a href={getFormDownloadUrl(item.attachmentUrl!)} download><Download className="size-4"/>ดาวน์โหลด</a></Button></div></article>)}{!visibleForms.length&&<p role="status" className="py-6 text-center text-slate-600">{forms.length?"ไม่พบแบบฟอร์มที่ค้นหา":"ยังไม่มีแบบฟอร์มที่หน่วยงานเผยแพร่"}</p>}</div></DialogContent></Dialog>
+      <RequestDialog onOpenForms={()=>{setRequestOpen(false);setFormsOpen(true);}} site={site} services={availableServices} initialType={requestType} open={requestOpen} onOpenChange={setRequestOpen} />
       <TrackDialog site={site} open={trackOpen} onOpenChange={setTrackOpen} />
     </div>
   );
 }
+
