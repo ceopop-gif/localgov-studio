@@ -1,3 +1,4 @@
+import { isRequestFormFile } from "@/lib/service-forms";
 import { rows, createRecord } from "@/db/repository";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getManagedSite } from "@/lib/site-repository";
@@ -38,6 +39,13 @@ export async function POST(
       return Response.json({ error: "กรอกข้อมูลเนื้อหาไม่ครบ", fields: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    if(parsed.data.type === "service" && parsed.data.attachmentUrl){
+      const match = /^\/api\/media\/([^/?#]+)$/.exec(parsed.data.attachmentUrl);
+      if(!match)return Response.json({error:"กรุณาเลือกแบบฟอร์มจากคลังไฟล์ของหน่วยงาน"}, {status:400});
+      const [file] = await rows("media_files", {id:`eq.${match[1]}`,site_id:`eq.${siteId}`,limit:"1"});
+      if(!file || !isRequestFormFile(file))return Response.json({error:"ไม่พบเอกสารในคลังไฟล์ของหน่วยงานนี้"}, {status:400});
+      parsed.data.attachmentName = file.fileName;
+    }
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     const { galleryUrls, ...contentData } = parsed.data;
@@ -66,3 +74,4 @@ export async function POST(
     return Response.json({ error: "บันทึกเนื้อหาไม่สำเร็จ" }, { status: 500 });
   }
 }
+
